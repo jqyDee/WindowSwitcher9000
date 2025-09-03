@@ -9,9 +9,17 @@ import SwiftUI
 
 @main
 struct WindowSwitcherApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    
     var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
+    }
+}
+
+class AppDelegate: NSObject, NSApplicationDelegate {
+    var menuBarController: MenuBarController?
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        menuBarController = MenuBarController()
+        _ = FloatingPanelHandler.shared
     }
 }

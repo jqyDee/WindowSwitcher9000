@@ -6,13 +6,30 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		09983FA92E6711ED00C65495 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 09983FA82E6711ED00C65495 /* KeyboardShortcuts */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		09983F922E66F7E300C65495 /* WindowSwitcher.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WindowSwitcher.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		09983FB42E6718F200C65495 /* Exceptions for "WindowSwitcher" folder in "WindowSwitcher" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 09983F912E66F7E300C65495 /* WindowSwitcher */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		09983F942E66F7E300C65495 /* WindowSwitcher */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				09983FB42E6718F200C65495 /* Exceptions for "WindowSwitcher" folder in "WindowSwitcher" target */,
+			);
 			path = WindowSwitcher;
 			sourceTree = "<group>";
 		};
@@ -23,6 +40,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				09983FA92E6711ED00C65495 /* KeyboardShortcuts in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +83,7 @@
 			);
 			name = WindowSwitcher;
 			packageProductDependencies = (
+				09983FA82E6711ED00C65495 /* KeyboardShortcuts */,
 			);
 			productName = WindowSwitcher;
 			productReference = 09983F922E66F7E300C65495 /* WindowSwitcher.app */;
@@ -94,6 +113,9 @@
 			);
 			mainGroup = 09983F892E66F7E300C65495;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				09983FA72E6711ED00C65495 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 09983F932E66F7E300C65495 /* Products */;
 			projectDirPath = "";
@@ -254,6 +276,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WindowSwitcher/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -279,6 +302,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WindowSwitcher/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -315,6 +339,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		09983FA72E6711ED00C65495 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sindresorhus/KeyboardShortcuts";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.3.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		09983FA82E6711ED00C65495 /* KeyboardShortcuts */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 09983FA72E6711ED00C65495 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
+			productName = KeyboardShortcuts;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 09983F8A2E66F7E300C65495 /* Project object */;
 }
