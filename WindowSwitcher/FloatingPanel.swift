@@ -8,13 +8,13 @@
 import AppKit
 import SwiftUI
 
+// MARK: - Floating Panel
 
 final class FloatingPanel<Content: View>: NSPanel {
+    private let didClose: () -> Void
+    
     init(
         view: () -> Content,
-        // We need to provide NSRect since the NSWindow doesn't inherit the size from the content
-        // by default. Not setting the contentRect would result in incorrect positioning
-        // when centering the window
         contentRect: NSRect,
         didClose: @escaping () -> Void
     ) {
@@ -22,71 +22,58 @@ final class FloatingPanel<Content: View>: NSPanel {
         
         super.init(
             contentRect: contentRect,
-            styleMask: [
-                .titled,
-                .closable,
-                .fullSizeContentView
-            ],
+            styleMask: [.titled, .closable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
         
-        /// Allow the panel to be on top of other windows
-        isFloatingPanel = true
-        level = .floating
+        configureAppearance()
+        configureBehavior()
+        configureControls()
         
-        /// Allow the pannel to be overlaid in a fullscreen space
-        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        animationBehavior = .none
-        
-        /// Don't show a window title, even if it's set
+        contentView = NSHostingView(rootView: view())
+    }
+    
+    // MARK: - Configuration
+    
+    private func configureAppearance() {
         titleVisibility = .hidden
         titlebarAppearsTransparent = true
         styleMask.remove(.titled)
-        
-        /// Since there is no title bar make the window moveable by dragging on the background
         isMovableByWindowBackground = true
-        
-        /// Hide when unfocused
+    }
+    
+    private func configureBehavior() {
+        isFloatingPanel = true
+        level = .floating
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         hidesOnDeactivate = true
-        
-        /// Hide all traffic light buttons
+        animationBehavior = .utilityWindow
+    }
+    
+    private func configureControls() {
         standardWindowButton(.closeButton)?.isHidden = true
         standardWindowButton(.miniaturizeButton)?.isHidden = true
         standardWindowButton(.zoomButton)?.isHidden = true
-        
-        /// Sets animations accordingly
-        animationBehavior = .utilityWindow
-        
-        /// Set the content view.
-        /// The safe area is ignored because the title bar still interferes with the geometry
-        contentView = NSHostingView(
-            rootView: view()
-        )
     }
     
-    private let didClose: () -> Void
+    // MARK: - Overrides
     
-    /// Close automatically when out of focus, e.g. outside click
+    /// Close automatically when out of focus
     override func resignKey() {
         super.resignKey()
         close()
     }
     
-    /// Close and toggle presentation, so that it matches the current state of the panel
+    /// Ensure `didClose` is triggered
     override func close() {
         super.close()
         didClose()
     }
     
-    /// `canBecomeKey` is required so that text inputs inside the panel can receive focus
-    override var canBecomeKey: Bool {
-        return true
-    }
+    /// Allow focus inside (for text fields, etc.)
+    override var canBecomeKey: Bool { true }
     
-    // For our use case, we don't want the window to become main and thus steal the focus from
-    // the previously opened app completely
-    override var canBecomeMain: Bool {
-        return false
-    }
+    /// Prevent stealing "main" focus from the active app
+    override var canBecomeMain: Bool { false }
 }

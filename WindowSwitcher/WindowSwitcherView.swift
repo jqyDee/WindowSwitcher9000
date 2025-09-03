@@ -5,23 +5,25 @@
 //  Created by Matti Fischbach on 02.09.25.
 //
 
+import SwiftUI
+import Cocoa
+
+// MARK: - Models
+
 struct Window: Identifiable, Decodable {
     let id: Int
     let app: String
     let title: String
 }
 
-import SwiftUI
+// MARK: - Main View
 
 struct WindowSwitcherView: View {
     @State private var filterText: String = ""
-    
     @State private var windows: [Window] = []
     @State private var cachedWindows: [Window] = []
-
     @State private var selectedIndex: Int = 0
-    
-    @FocusState var isFocused
+    @FocusState private var isFocused
     
     var onClose: (([Window]) -> Void)?
     
@@ -32,242 +34,243 @@ struct WindowSwitcherView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            VStack(spacing: 0) {
-                KeyHandlingTextField(
-                    text: $filterText,
-                    isFocused: _isFocused,
-                    onEnter: handleEnter,
-                    onEscape: handleEscape,
-                    onTab: moveSelectionForward,
-                    onShiftTab: moveSelectionBackward
-                )
-                .frame(height: 30)
-                .font(.title)
-                .textFieldStyle(.plain)
-                .focused($isFocused)
-                .padding(.bottom)
-                
-                Divider()
-                    .background(Color(white: 0.5).opacity(0.5))
-                    .frame(height: 0.08)
-            }
-            .padding()
-            
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach(displayedWindows.indices, id: \.self) { index in
-                            let window = displayedWindows[index]
-                            Button(action: { focusWindow(window) }) {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(window.title.isEmpty ? "(Untitled)" : window.title)
-                                        .font(.headline)
-                                    Text(window.app)
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                }
-                                .padding(8)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                        .fill(index == selectedIndex ? Color.white.opacity(0.15) : .clear)
-                                )
-                            }
-                            .buttonStyle(.plain)
-                            .id(index) // IMPORTANT: give each row a unique ID for scrolling
-                        }
-                    }
-                    .padding([.horizontal])
-                }
-                .onChange(of: selectedIndex) { newIndex in
-                    // Scroll to the currently selected row
-                    withAnimation(.easeInOut(duration: 0.15)) {
-                        proxy.scrollTo(newIndex, anchor: .center)
-                    }
-                }
-            }
-            
-            // Bottom HStack pinned
-            VStack(spacing: 0) {
-                Divider()
-                    .background(Color(white: 0.5).opacity(0.5))
-                    .frame(height: 0.08)
-                
-                HStack {
-                    Button(action: { handleEscape() }) {
-                        Image(systemName: "rectangle.3.offgrid")
-                            .resizable()
-                            .frame(width: 12, height: 12)
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    
-                    Spacer() // pushes everything else to the right if needed
-                    
-                    Text("WindowSwitcher9000")
-                }
-                .padding(.horizontal)
-                .frame(height: 30) // the total height of the bottom bar
-                .frame(maxWidth: .infinity, alignment: .leading) // align content to left
-            }
-            .background(
-                VisualEffectBlur(darkeningOpacity: 0.4)
-            )
+            header
+            windowList
+            footer
         }
-        .background(
-            VisualEffectBlur(darkeningOpacity: 0.25)
-        )
+        .background(VisualEffectBlur(darkeningOpacity: 0.25))
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .foregroundStyle(.primary)
         .frame(width: 750, height: 300)
-        .onAppear() {
-            isFocused = true
-            print("WindowSwitcher : loaded cached windows")
-            cachedWindows = windows
-            refreshWindows()
+        .onAppear(perform: onAppear)
+        .onExitCommand(perform: handleExitCommand)
+        .onChange(of: filterText) { _ in selectedIndex = 0 }
+    }
+}
+
+// MARK: - Subviews
+
+private extension WindowSwitcherView {
+    var header: some View {
+        VStack(spacing: 0) {
+            KeyHandlingTextField(
+                text: $filterText,
+                isFocused: _isFocused,
+                onEnter: handleEnter,
+                onEscape: handleEscape,
+                onTab: moveSelectionForward,
+                onShiftTab: moveSelectionBackward
+            )
+            .frame(height: 30)
+            .font(.title)
+            .textFieldStyle(.plain)
+            .focused($isFocused)
+            .padding(.bottom)
+            
+            Divider()
+                .background(Color(white: 0.5).opacity(0.5))
+                .frame(height: 0.08)
         }
-        .onExitCommand {
-            if !filterText.isEmpty {
-                filterText = ""  // clear the search field first
-            } else {
-                onClose?(windows)       // close the panel if the field is already empty
+        .padding()
+    }
+    
+    var windowList: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(displayedWindows.indices, id: \.self) { index in
+                        let window = displayedWindows[index]
+                        Button(action: { focusWindow(window) }) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(window.title.isEmpty ? "(Untitled)" : window.title)
+                                    .font(.headline)
+                                Text(window.app)
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(index == selectedIndex ? Color.white.opacity(0.15) : .clear)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .id(index)
+                    }
+                }
+                .padding(.horizontal)
+            }
+            .onChange(of: selectedIndex) { newIndex in
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    proxy.scrollTo(newIndex, anchor: .center)
+                }
             }
         }
-        .onChange(of: filterText) { _ in
-            // reset selection whenever the filter changes
-            selectedIndex = 0
-        }
     }
     
-    private var filteredWindows: [Window] {
-        if filterText.isEmpty {
-            return windows
+    var footer: some View {
+        VStack(spacing: 0) {
+            Divider()
+                .background(Color(white: 0.5).opacity(0.5))
+                .frame(height: 0.08)
+            
+            HStack {
+                Button(action: handleEscape) {
+                    Image(systemName: "rectangle.3.offgrid")
+                        .resizable()
+                        .frame(width: 12, height: 12)
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+                
+                Spacer()
+                Text("WindowSwitcher9000")
+            }
+            .padding(.horizontal)
+            .frame(height: 30)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .background(VisualEffectBlur(darkeningOpacity: 0.4))
+    }
+}
+
+// MARK: - Computed Properties
+
+private extension WindowSwitcherView {
+    var filteredWindows: [Window] {
+        guard !filterText.isEmpty else { return windows }
+        
+        return windows
+            .map { ($0, fuzzyScore(text: $0.title + " " + $0.app, pattern: filterText)) }
+            .filter { $0.1 > 0 }
+            .sorted { $0.1 > $1.1 }
+            .map { $0.0 }
+    }
+    
+    var displayedWindows: [Window] {
+        windows.isEmpty && !cachedWindows.isEmpty ? cachedWindows : filteredWindows
+    }
+}
+
+// MARK: - Lifecycle
+
+private extension WindowSwitcherView {
+    func onAppear() {
+        isFocused = true
+        cachedWindows = windows
+        refreshWindows()
+    }
+    
+    func handleExitCommand() {
+        if !filterText.isEmpty {
+            filterText = ""
         } else {
-            return windows
-                .map { ($0, fuzzyScore(text: $0.title + " " + $0.app, pattern: filterText)) }
-                .filter { $0.1 > 0 }  // keep only matches
-                .sorted { $0.1 > $1.1 }  // highest score first
-                .map { $0.0 }
+            onClose?(windows)
         }
     }
-    
-    private var displayedWindows: [Window] {
-        if windows.isEmpty && !cachedWindows.isEmpty {
-            return cachedWindows
-        } else {
-            return filteredWindows
-        }
-    }
-    
-    private func moveSelectionForward() {
+}
+
+// MARK: - Selection Handling
+
+private extension WindowSwitcherView {
+    func moveSelectionForward() {
         guard !filteredWindows.isEmpty else { return }
         selectedIndex = (selectedIndex + 1) % filteredWindows.count
     }
 
-    private func moveSelectionBackward() {
+    func moveSelectionBackward() {
         guard !filteredWindows.isEmpty else { return }
         selectedIndex = (selectedIndex - 1 + filteredWindows.count) % filteredWindows.count
     }
 
-    private func handleEnter() {
-        print("WindowSwitcher : enter on selected = \(selectedIndex)")
+    func handleEnter() {
         if let command = extractCommand(from: filterText) {
             handleCommand(command)
-            filterText = "" // optional: clear after execution
+            filterText = ""
             return
         }
-        
         selectWindow()
     }
 
-    private func handleEscape() {
-        print("WindowSwitcher : esc-pressed")
+    func handleEscape() {
         if !filterText.isEmpty {
-            print("WindowSwitcher : filter = \"\"")
             filterText = ""
         } else {
-            print("WindowSwitcher : closing")
             onClose?(windows)
         }
     }
     
-    private func selectWindow() {
+    func selectWindow() {
         guard filteredWindows.indices.contains(selectedIndex) else { return }
         let window = filteredWindows[selectedIndex]
         focusWindow(window)
         onClose?(windows)
     }
-    
-    private func loadWindows() -> [Window] {
-        print("WindowSwitcher : loading windows")
+}
+
+// MARK: - Window Management
+
+private extension WindowSwitcherView {
+    func loadWindows() -> [Window] {
         let task = Process()
-        
         task.launchPath = "/bin/zsh"
-        task.arguments = ["-c", "/opt/homebrew/bin/yabai -m query --windows | jq -c '.[] | {id: .id, app: .app, title: .title}'"]
+        task.arguments = [
+            "-c",
+            "/opt/homebrew/bin/yabai -m query --windows | jq -c '.[] | {id: .id, app: .app, title: .title}'"
+        ]
         
         let pipe = Pipe()
         task.standardOutput = pipe
         task.launch()
         
-        var newWindows: [Window] = []
-        
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        if let output = String(data: data, encoding: .utf8) {
-            print("WindowSwitcher : yabai call succesful")
-            let lines = output.split(separator: "\n").map { String($0) }
-            let decoder = JSONDecoder()
-            newWindows = lines.compactMap { line in
-                line.data(using: .utf8).flatMap { try? decoder.decode(Window.self, from: $0) }
-            }
-        } else {
-            print("WindowSwitcher : yabai call unsuccesful")
-            newWindows = [
+        guard
+            let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)
+        else {
+            return [
                 Window(id: 1, app: "Dummy1", title: "Wooow"),
                 Window(id: 2, app: "Dummy2", title: "Wooow"),
-                Window(id: 3, app: "Dummy3", title: "Wooow"),
+                Window(id: 3, app: "Dummy3", title: "Wooow")
             ]
         }
-        return newWindows
+        
+        let decoder = JSONDecoder()
+        return output
+            .split(separator: "\n")
+            .compactMap { line in
+                line.data(using: .utf8).flatMap { try? decoder.decode(Window.self, from: $0) }
+            }
     }
     
-    private func refreshWindows() {
-        print("WindowSwitcher : refreshing windows")
+    func refreshWindows() {
         DispatchQueue.global(qos: .userInitiated).async {
             var newWindows = loadWindows()
-
-            // Sort windows by app name, then title
-            newWindows.sort { lhs, rhs in
-                if lhs.app != rhs.app {
-                    return lhs.app < rhs.app
-                } else {
-                    return lhs.title < rhs.title
-                }
+            newWindows.sort {
+                $0.app == $1.app ? $0.title < $1.title : $0.app < $1.app
             }
-
             DispatchQueue.main.async {
                 self.windows = newWindows
-                print("WindowSwitcher : exchanged new windows (sorted)")
             }
         }
     }
-
     
-    private func focusWindow(_ window: Window) {
-        print("WindowSwitcher : focusing window \(window)")
+    func focusWindow(_ window: Window) {
         let task = Process()
         task.launchPath = "/bin/zsh"
         task.arguments = ["-c", "/opt/homebrew/bin/yabai -m window --focus \(window.id)"]
         task.launch()
     }
-    
-    private func fuzzyScore(text: String, pattern: String) -> Int {
-        let patternLower = pattern.lowercased()
+}
+
+// MARK: - Utilities
+
+private extension WindowSwitcherView {
+    func fuzzyScore(text: String, pattern: String) -> Int {
         let textLower = text.lowercased()
+        let patternLower = pattern.lowercased()
         
-        // Perfect match
         if textLower.contains(patternLower) { return 100 }
         
-        // Partial matching: count matching characters in order
         var score = 0
         var lastIndex = textLower.startIndex
         for char in patternLower {
@@ -281,76 +284,73 @@ struct WindowSwitcherView: View {
         return score
     }
     
-    private struct VisualEffectBlur: NSViewRepresentable {
-        var darkeningOpacity: CGFloat = 0.4   // 0 = no darkening, 1 = fully black
-
-        func makeNSView(context: Context) -> NSVisualEffectView {
-            let view = NSVisualEffectView()
-            view.blendingMode = .behindWindow
-            view.material = .sidebar // or .menu, .sidebar, etc.
-            view.state = .active
-            
-            // Add a dark overlay inside the NSVisualEffectView
-            let darkOverlay = NSView()
-            darkOverlay.wantsLayer = true
-            darkOverlay.layer?.backgroundColor = NSColor.black.withAlphaComponent(darkeningOpacity).cgColor
-            darkOverlay.translatesAutoresizingMaskIntoConstraints = false
-            view.addSubview(darkOverlay)
-            
-            // Pin overlay to fill the effect view
-            NSLayoutConstraint.activate([
-                darkOverlay.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-                darkOverlay.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-                darkOverlay.topAnchor.constraint(equalTo: view.topAnchor),
-                darkOverlay.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            ])
-            
-            return view
-        }
-
-        func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
-            // Optionally update overlay opacity dynamically
-            if let overlay = nsView.subviews.first {
-                overlay.layer?.backgroundColor = NSColor.black.withAlphaComponent(darkeningOpacity).cgColor
-            }
-        }
-    }
-    
-    private func extractCommand(from text: String) -> String? {
+    func extractCommand(from text: String) -> String? {
         let regex = try! NSRegularExpression(pattern: #"^/([^/]+)/$"#)
         let range = NSRange(location: 0, length: text.utf16.count)
-
-        if let match = regex.firstMatch(in: text, range: range),
-           let commandRange = Range(match.range(at: 1), in: text) {
-            return String(text[commandRange]).uppercased()
+        
+        guard
+            let match = regex.firstMatch(in: text, range: range),
+            let commandRange = Range(match.range(at: 1), in: text)
+        else {
+            return nil
         }
-        return nil
+        return String(text[commandRange]).uppercased()
     }
     
-    private func handleCommand(_ command: String) {
+    func handleCommand(_ command: String) {
+        print("WindowSwitcher : command '\(command)'")
         switch command {
         case "SETTINGS":
-            let settingsWindow = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
-                styleMask: [.titled, .closable, .resizable],
-                backing: .buffered,
-                defer: false
-            )
-            settingsWindow.isReleasedWhenClosed = false
-            settingsWindow.center()
-            settingsWindow.title = "Settings"
-            settingsWindow.contentView = NSHostingView(rootView: SettingsView())
-            settingsWindow.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
+            MenuBarHandler.shared.openSettings()
         case "SHOW_ICON":
             MenuBarHandler.shared.showBarIcon()
         case "HIDE_ICON":
             MenuBarHandler.shared.hideBarIcon()
+        case "TOGGLE_DOCK":
+            MenuBarHandler.shared.toggleDockIcon()
+        case "QUIT":
+            MenuBarHandler.shared.quit()
+
         default:
             print("Unknown command: \(command)")
         }
     }
 }
+
+// MARK: - Visual Effect Blur
+
+private struct VisualEffectBlur: NSViewRepresentable {
+    var darkeningOpacity: CGFloat = 0.4
+
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.blendingMode = .behindWindow
+        view.material = .sidebar
+        view.state = .active
+        
+        let darkOverlay = NSView()
+        darkOverlay.wantsLayer = true
+        darkOverlay.layer?.backgroundColor = NSColor.black.withAlphaComponent(darkeningOpacity).cgColor
+        darkOverlay.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(darkOverlay)
+        
+        NSLayoutConstraint.activate([
+            darkOverlay.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            darkOverlay.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            darkOverlay.topAnchor.constraint(equalTo: view.topAnchor),
+            darkOverlay.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+        ])
+        
+        return view
+    }
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
+        nsView.subviews.first?.layer?.backgroundColor =
+            NSColor.black.withAlphaComponent(darkeningOpacity).cgColor
+    }
+}
+
+// MARK: - Preview
 
 #Preview {
     WindowSwitcherView()
