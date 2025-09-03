@@ -171,6 +171,12 @@ struct WindowSwitcherView: View {
 
     private func handleEnter() {
         print("WindowSwitcher : enter on selected = \(selectedIndex)")
+        if let command = extractCommand(from: filterText) {
+            handleCommand(command)
+            filterText = "" // optional: clear after execution
+            return
+        }
+        
         selectWindow()
     }
 
@@ -281,7 +287,7 @@ struct WindowSwitcherView: View {
         func makeNSView(context: Context) -> NSVisualEffectView {
             let view = NSVisualEffectView()
             view.blendingMode = .behindWindow
-            view.material = .menu // or .menu, .sidebar, etc.
+            view.material = .sidebar // or .menu, .sidebar, etc.
             view.state = .active
             
             // Add a dark overlay inside the NSVisualEffectView
@@ -307,6 +313,41 @@ struct WindowSwitcherView: View {
             if let overlay = nsView.subviews.first {
                 overlay.layer?.backgroundColor = NSColor.black.withAlphaComponent(darkeningOpacity).cgColor
             }
+        }
+    }
+    
+    private func extractCommand(from text: String) -> String? {
+        let regex = try! NSRegularExpression(pattern: #"^/([^/]+)/$"#)
+        let range = NSRange(location: 0, length: text.utf16.count)
+
+        if let match = regex.firstMatch(in: text, range: range),
+           let commandRange = Range(match.range(at: 1), in: text) {
+            return String(text[commandRange]).uppercased()
+        }
+        return nil
+    }
+    
+    private func handleCommand(_ command: String) {
+        switch command {
+        case "SETTINGS":
+            let settingsWindow = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
+                styleMask: [.titled, .closable, .resizable],
+                backing: .buffered,
+                defer: false
+            )
+            settingsWindow.isReleasedWhenClosed = false
+            settingsWindow.center()
+            settingsWindow.title = "Settings"
+            settingsWindow.contentView = NSHostingView(rootView: SettingsView())
+            settingsWindow.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        case "SHOW_ICON":
+            MenuBarHandler.shared.showBarIcon()
+        case "HIDE_ICON":
+            MenuBarHandler.shared.hideBarIcon()
+        default:
+            print("Unknown command: \(command)")
         }
     }
 }

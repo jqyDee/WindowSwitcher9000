@@ -8,11 +8,16 @@
 import SwiftUI
 import AppKit
 
-final class MenuBarController {
+final class MenuBarHandler {
+    static var shared = MenuBarHandler()
+    
     private var statusItem: NSStatusItem!
-    private var panelHandler: FloatingPanelHandler?
-
+    
     init() {
+        setupMenuBar()
+    }
+    
+    private func setupMenuBar() {
         // Create a variable-length status item (icon only)
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
@@ -42,6 +47,16 @@ final class MenuBarController {
         menu.addItem(settingsItem)
         
         menu.addItem(.separator())
+        
+        let removeMenuItem = NSMenuItem(
+            title: "Hide Menu Bar Icon",
+            action: #selector(hideBarIcon),
+            keyEquivalent: ""
+        )
+        removeMenuItem.target = self
+        menu.addItem(removeMenuItem)
+        
+        menu .addItem(.separator())
         
         let quitItem = NSMenuItem(
             title: "Quit",
@@ -77,6 +92,14 @@ final class MenuBarController {
         settingsWindow.contentView = NSHostingView(rootView: SettingsView())
         settingsWindow.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+    
+    @objc func hideBarIcon() {
+        statusItem.isVisible = false
+    }
+    
+    @objc func showBarIcon() {
+        statusItem.isVisible = true
     }
     
     @objc private func quit() {

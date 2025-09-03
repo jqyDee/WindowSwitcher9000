@@ -16,10 +16,10 @@ struct WindowSwitcherApp: App {
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
-    var menuBarController: MenuBarController?
+    var menuBarController: MenuBarHandler?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        menuBarController = MenuBarController()
+        menuBarController = MenuBarHandler()
         _ = FloatingPanelHandler.shared
     }
 }
