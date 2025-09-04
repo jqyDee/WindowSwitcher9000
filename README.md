@@ -1,6 +1,6 @@
 # WindowSwitcher9000
 
-[![Watch the video](https://github.com/jqyDee/WindowSwitcher9000/blob/main/GithubAssets/main-thumbnail.png)](https://github.com/jqyDee/WindowSwitcher9000/blob/main/GithubAssets/main.mov)
+[![](https://github.com/jqyDee/WindowSwitcher9000/blob/main/GithubAssets/main-thumbnail.png)]
 
 # Description
 This is a small but fast and I hope reliable window switcher (basically an alternative to alt tab). Text based and not program bound. So way faster than you tapping away at your CMD + TAB.
