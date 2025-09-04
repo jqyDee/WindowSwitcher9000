@@ -46,24 +46,6 @@ extension MenuBarHandler {
         }
     }
     
-    @objc func openSettings() {
-        print("MenuBarHandler : Open settings")
-        
-        let settingsWindow = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
-            styleMask: [.titled, .closable, .resizable],
-            backing: .buffered,
-            defer: false
-        )
-        
-        settingsWindow.isReleasedWhenClosed = false
-        settingsWindow.center()
-        settingsWindow.title = "Settings"
-        settingsWindow.contentView = NSHostingView(rootView: SettingsView())
-        settingsWindow.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-    }
-
     @objc func quit() {
         print("MenuBarHandler : Quitting")
         NSApp.terminate(nil)
@@ -72,6 +54,17 @@ extension MenuBarHandler {
     @objc func checkAccessibilityPermission() -> Bool {
         let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeRetainedValue() as NSString: true]
         return AXIsProcessTrustedWithOptions(options)
+    }
+    
+    @objc func openHotkeyPopover() {
+        let popover = NSPopover()
+        popover.contentSize = NSSize(width: 300, height: 100)
+        popover.behavior = .transient
+        popover.contentViewController = NSHostingController(rootView: SettingsView())
+        
+        if let button = statusItem.button {
+            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        }
     }
 }
 
@@ -102,12 +95,6 @@ private extension MenuBarHandler {
             key: ""
         ))
         
-        menu.addItem(makeMenuItem(
-            title: "Settings",
-            action: #selector(openSettings),
-            key: ","
-        ))
-        
         menu.addItem(.separator())
         
         menu.addItem(makeMenuItem(
@@ -118,6 +105,11 @@ private extension MenuBarHandler {
         menu.addItem(makeMenuItem(
             title: "Toggle Dock Icon",
             action: #selector(toggleDockIcon)
+        ))
+        
+        menu.addItem(makeMenuItem(
+            title: "Set Hotkey",
+            action: #selector(openHotkeyPopover)
         ))
         
         menu.addItem(makeMenuItem(

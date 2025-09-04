@@ -58,10 +58,12 @@ struct KeyHandlingTextField: NSViewRepresentable {
 
         func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
             switch commandSelector {
-            case #selector(NSResponder.insertTab(_:)):
+            case #selector(NSResponder.insertTab(_:)),
+                 #selector(NSResponder.moveDown(_:)):
                 parent.onTab?()
                 return true
-            case #selector(NSResponder.insertBacktab(_:)):
+            case #selector(NSResponder.insertBacktab(_:)),
+                 #selector(NSResponder.moveUp(_:)):
                 parent.onShiftTab?()
                 return true
             case #selector(NSResponder.cancelOperation(_:)):

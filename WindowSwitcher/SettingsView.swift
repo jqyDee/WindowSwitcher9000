@@ -11,7 +11,7 @@ import KeyboardShortcuts
 struct SettingsView: View {
     var body: some View {
         HStack {
-            Text("Configure Hotkey")
+            Text("Open Switcher")
                 .padding()
             KeyboardShortcuts.Recorder(for: .openHotkeyWindow)
                 .onSubmit {

@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Cocoa
+import Combine
 
 // MARK: - Models
 
@@ -14,6 +15,7 @@ struct Window: Identifiable, Decodable {
     let id: Int
     let app: String
     let title: String
+    let space: Int
 }
 
 // MARK: - Main View
@@ -23,8 +25,11 @@ struct WindowSwitcherView: View {
     @State private var windows: [Window] = []
     @State private var cachedWindows: [Window] = []
     @State private var selectedIndex: Int = 0
-    @FocusState private var isFocused
+    @State private var timer: AnyCancellable?
+    @State private var footerCommands: String? = nil
     
+    @FocusState private var isFocused
+
     var onClose: (([Window]) -> Void)?
     
     init(initialWindows: [Window] = [], onClose: (([Window]) -> Void)? = nil) {
@@ -44,7 +49,10 @@ struct WindowSwitcherView: View {
         .frame(width: 750, height: 300)
         .onAppear(perform: onAppear)
         .onExitCommand(perform: handleExitCommand)
-        .onChange(of: filterText) { _ in selectedIndex = 0 }
+        .onChange(of: filterText) { _ in
+            selectedIndex = 0
+            clampSelectedIndex()
+        }
     }
 }
 
@@ -116,7 +124,8 @@ private extension WindowSwitcherView {
                 .frame(height: 0.08)
             
             HStack {
-                Button(action: handleEscape) {
+                // Left image/button
+                Button(action: rickRoll) {
                     Image(systemName: "rectangle.3.offgrid")
                         .resizable()
                         .frame(width: 12, height: 12)
@@ -124,8 +133,21 @@ private extension WindowSwitcherView {
                 }
                 .buttonStyle(.plain)
                 
+                // Middle: optional commands
+                if let commands = footerCommands {
+                    Text(commands)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+                
                 Spacer()
+                
+                // Right text
                 Text("WindowSwitcher9000")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
             }
             .padding(.horizontal)
             .frame(height: 30)
@@ -141,15 +163,18 @@ private extension WindowSwitcherView {
     var filteredWindows: [Window] {
         guard !filterText.isEmpty else { return windows }
         
+        let threshold = max(3, filterText.count / 2)
+        
         return windows
             .map { ($0, fuzzyScore(text: $0.title + " " + $0.app, pattern: filterText)) }
-            .filter { $0.1 > 0 }
+            .filter { $0.1 >= threshold }
             .sorted { $0.1 > $1.1 }
             .map { $0.0 }
     }
     
     var displayedWindows: [Window] {
-        windows.isEmpty && !cachedWindows.isEmpty ? cachedWindows : filteredWindows
+        let listToShow = filterText.isEmpty ? (windows.isEmpty ? cachedWindows : windows) : filteredWindows
+        return listToShow
     }
 }
 
@@ -158,8 +183,7 @@ private extension WindowSwitcherView {
 private extension WindowSwitcherView {
     func onAppear() {
         isFocused = true
-        cachedWindows = windows
-        refreshWindows()
+        observePanelFocus()
     }
     
     func handleExitCommand() {
@@ -168,6 +192,42 @@ private extension WindowSwitcherView {
         } else {
             onClose?(windows)
         }
+    }
+    
+    private func observePanelFocus() {
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.didBecomeKeyNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            startAutoRefresh()
+            refreshWindows() // optional immediate refresh
+        }
+
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.didResignKeyNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            stopAutoRefresh()
+        }
+    }
+
+    private func startAutoRefresh() {
+        // Cancel existing timer if any
+        timer?.cancel()
+        
+        // Run every 2 seconds
+        timer = Timer.publish(every: 0.5, on: .main, in: .common)
+            .autoconnect()
+            .sink { _ in
+                refreshWindows()
+            }
+    }
+    
+    private func stopAutoRefresh() {
+        timer?.cancel()
+        timer = nil
     }
 }
 
@@ -199,6 +259,7 @@ private extension WindowSwitcherView {
         } else {
             onClose?(windows)
         }
+        footerCommands = nil
     }
     
     func selectWindow() {
@@ -217,7 +278,7 @@ private extension WindowSwitcherView {
         task.launchPath = "/bin/zsh"
         task.arguments = [
             "-c",
-            "/opt/homebrew/bin/yabai -m query --windows | jq -c '.[] | {id: .id, app: .app, title: .title}'"
+            "/opt/homebrew/bin/yabai -m query --windows | jq -c '.[] | {id: .id, app: .app, title: .title, space: .space}'"
         ]
         
         let pipe = Pipe()
@@ -228,9 +289,9 @@ private extension WindowSwitcherView {
             let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)
         else {
             return [
-                Window(id: 1, app: "Dummy1", title: "Wooow"),
-                Window(id: 2, app: "Dummy2", title: "Wooow"),
-                Window(id: 3, app: "Dummy3", title: "Wooow")
+                Window(id: 1, app: "Dummy1", title: "Wooow", space: 1),
+                Window(id: 2, app: "Dummy2", title: "Wooow", space: 1),
+                Window(id: 3, app: "Dummy3", title: "Wooow", space: 1)
             ]
         }
         
@@ -240,16 +301,28 @@ private extension WindowSwitcherView {
             .compactMap { line in
                 line.data(using: .utf8).flatMap { try? decoder.decode(Window.self, from: $0) }
             }
+            .map { window in
+                let separators: [Character] = ["-", "—", "–"] // hyphen, em-dash, en-dash
+                var newTitle = window.title
+
+                if let lastDashIndex = newTitle.lastIndex(where: { separators.contains($0) }) {
+                    newTitle = newTitle[newTitle.index(after: lastDashIndex)...].trimmingCharacters(in: .whitespaces)
+                }
+
+                return Window(id: window.id, app: window.app, title: newTitle, space: window.space)
+            }
     }
-    
+
     func refreshWindows() {
         DispatchQueue.global(qos: .userInitiated).async {
-            var newWindows = loadWindows()
-            newWindows.sort {
+            let newWindows = loadWindows().sorted {
                 $0.app == $1.app ? $0.title < $1.title : $0.app < $1.app
             }
+            
             DispatchQueue.main.async {
+                self.cachedWindows = newWindows.isEmpty ? self.cachedWindows : newWindows
                 self.windows = newWindows
+                self.clampSelectedIndex()
             }
         }
     }
@@ -257,8 +330,22 @@ private extension WindowSwitcherView {
     func focusWindow(_ window: Window) {
         let task = Process()
         task.launchPath = "/bin/zsh"
-        task.arguments = ["-c", "/opt/homebrew/bin/yabai -m window --focus \(window.id)"]
+        
+        // Switch to the window's space first
+        task.arguments = [
+            "-c",
+            "/opt/homebrew/bin/yabai -m space --focus \(window.space); /opt/homebrew/bin/yabai -m window --focus \(window.id)"
+        ]
+        
         task.launch()
+    }
+
+    func clampSelectedIndex() {
+        if displayedWindows.isEmpty {
+            selectedIndex = 0
+        } else if selectedIndex >= displayedWindows.count {
+            selectedIndex = displayedWindows.count - 1
+        }
     }
 }
 
@@ -300,8 +387,6 @@ private extension WindowSwitcherView {
     func handleCommand(_ command: String) {
         print("WindowSwitcher : command '\(command)'")
         switch command {
-        case "SETTINGS":
-            MenuBarHandler.shared.openSettings()
         case "SHOW_ICON":
             MenuBarHandler.shared.showBarIcon()
         case "HIDE_ICON":
@@ -310,9 +395,17 @@ private extension WindowSwitcherView {
             MenuBarHandler.shared.toggleDockIcon()
         case "QUIT":
             MenuBarHandler.shared.quit()
+        case "HELP":
+            footerCommands = "/commands/: show_icon, hide_icon, toggle_dock, quit, help"
 
         default:
             print("Unknown command: \(command)")
+        }
+    }
+    
+    func rickRoll() {
+        if let url = URL(string: "https://www.youtube.com/watch?v=dQw4w9WgXcQ") {
+            NSWorkspace.shared.open(url)
         }
     }
 }
