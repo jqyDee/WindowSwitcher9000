@@ -33,6 +33,11 @@
 			path = WindowSwitcher;
 			sourceTree = "<group>";
 		};
+		09C6F06C2E692CE50065FC86 /* GithubAssets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = GithubAssets;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -50,6 +55,7 @@
 		09983F892E66F7E300C65495 = {
 			isa = PBXGroup;
 			children = (
+				09C6F06C2E692CE50065FC86 /* GithubAssets */,
 				09983F942E66F7E300C65495 /* WindowSwitcher */,
 				09983F932E66F7E300C65495 /* Products */,
 			);
@@ -80,6 +86,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				09983F942E66F7E300C65495 /* WindowSwitcher */,
+				09C6F06C2E692CE50065FC86 /* GithubAssets */,
 			);
 			name = WindowSwitcher;
 			packageProductDependencies = (
