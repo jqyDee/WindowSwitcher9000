@@ -29,7 +29,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // _ = MenuBarHandler.shared.checkAccessibilityPermission()
+        _ = MenuBarHandler.shared.checkAccessibilityPermission()
         
         _ = MenuBarHandler.shared
         _ = FloatingPanelHandler.shared

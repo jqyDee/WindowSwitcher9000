@@ -1,14 +1,5 @@
-//
-//  FloatingPanel.swift
-//  WindowSwitcher
-//
-//  Created by Matti Fischbach on 02.09.25.
-//
-
 import AppKit
 import SwiftUI
-
-// MARK: - Floating Panel
 
 final class FloatingPanel<Content: View>: NSPanel {
     private let didClose: () -> Void
@@ -46,9 +37,13 @@ final class FloatingPanel<Content: View>: NSPanel {
     private func configureBehavior() {
         isFloatingPanel = true
         level = .floating
-        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        hidesOnDeactivate = true
+        // CHOICE: move to the active space when shown (do NOT combine with canJoinAllSpaces)
+        collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
         animationBehavior = .utilityWindow
+        
+        // Make key behavior deterministic when we request focus programmatically
+        becomesKeyOnlyIfNeeded = false
+        hidesOnDeactivate = true
     }
     
     private func configureControls() {
@@ -59,21 +54,9 @@ final class FloatingPanel<Content: View>: NSPanel {
     
     // MARK: - Overrides
     
-    /// Close automatically when out of focus
-    override func resignKey() {
-        super.resignKey()
-        close()
-    }
-    
-    /// Ensure `didClose` is triggered
-    override func close() {
-        super.close()
-        didClose()
-    }
-    
     /// Allow focus inside (for text fields, etc.)
     override var canBecomeKey: Bool { true }
     
-    /// Prevent stealing "main" focus from the active app
+    /// Panels typically shouldn't become main
     override var canBecomeMain: Bool { false }
 }
