@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		09983FA92E6711ED00C65495 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 09983FA82E6711ED00C65495 /* KeyboardShortcuts */; };
+		0916AAE82E6E37470000B7B3 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 0916AAE72E6E37470000B7B3 /* KeyboardShortcuts */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -45,7 +45,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				09983FA92E6711ED00C65495 /* KeyboardShortcuts in Frameworks */,
+				0916AAE82E6E37470000B7B3 /* KeyboardShortcuts in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -90,7 +90,7 @@
 			);
 			name = WindowSwitcher;
 			packageProductDependencies = (
-				09983FA82E6711ED00C65495 /* KeyboardShortcuts */,
+				0916AAE72E6E37470000B7B3 /* KeyboardShortcuts */,
 			);
 			productName = WindowSwitcher;
 			productReference = 09983F922E66F7E300C65495 /* WindowSwitcher.app */;
@@ -121,7 +121,7 @@
 			mainGroup = 09983F892E66F7E300C65495;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				09983FA72E6711ED00C65495 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
+				0916AAE62E6E37470000B7B3 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 09983F932E66F7E300C65495 /* Products */;
@@ -358,7 +358,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		09983FA72E6711ED00C65495 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */ = {
+		0916AAE62E6E37470000B7B3 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sindresorhus/KeyboardShortcuts";
 			requirement = {
@@ -369,9 +369,9 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		09983FA82E6711ED00C65495 /* KeyboardShortcuts */ = {
+		0916AAE72E6E37470000B7B3 /* KeyboardShortcuts */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 09983FA72E6711ED00C65495 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
+			package = 0916AAE62E6E37470000B7B3 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
 			productName = KeyboardShortcuts;
 		};
 /* End XCSwiftPackageProductDependency section */

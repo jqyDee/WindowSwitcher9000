@@ -16,6 +16,21 @@ struct Window: Identifiable, Decodable {
     let app: String
     let title: String
     let space: Int
+    let pid: pid_t
+}
+
+extension Window {
+    var runningApp: NSRunningApplication? {
+        NSRunningApplication(processIdentifier: pid)
+    }
+
+    var bundleIdentifier: String? {
+        runningApp?.bundleIdentifier
+    }
+
+    var appIcon: NSImage? {
+        runningApp?.icon
+    }
 }
 
 // MARK: - Main View
@@ -89,20 +104,31 @@ private extension WindowSwitcherView {
                     ForEach(displayedWindows.indices, id: \.self) { index in
                         let window = displayedWindows[index]
                         Button(action: { focusWindow(window) }) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(window.title.isEmpty ? "(Untitled)" : window.title)
-                                    .font(.headline)
-                                Text(window.app)
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                            HStack(spacing: 8) {
+                                // App Icon
+                                if let icon = window.appIcon {
+                                    Image(nsImage: icon)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fit)
+                                        .frame(width: 30, height: 30)
+                                        .cornerRadius(4)
+                                }
+                                
+                                // Title + App Name
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(window.title.isEmpty ? "(Untitled)" : window.title)
+                                        .font(.headline)
+                                    Text(window.app)
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
                             }
                             .padding(8)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(
                                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                                     .fill(index == selectedIndex ? Color.white.opacity(0.15) : .clear)
-                            )
-                        }
+                            )                        }
                         .buttonStyle(.plain)
                         .id(index)
                     }
@@ -278,8 +304,9 @@ private extension WindowSwitcherView {
         task.launchPath = "/bin/zsh"
         task.arguments = [
             "-c",
-            "/opt/homebrew/bin/yabai -m query --windows | jq -c '.[] | {id: .id, app: .app, title: .title, space: .space}'"
+            "/opt/homebrew/bin/yabai -m query --windows | jq -c '.[] | {id: .id, app: .app, title: .title, space: .space, pid: .pid}'"
         ]
+
         
         let pipe = Pipe()
         task.standardOutput = pipe
@@ -289,9 +316,9 @@ private extension WindowSwitcherView {
             let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)
         else {
             return [
-                Window(id: 1, app: "Dummy1", title: "Wooow", space: 1),
-                Window(id: 2, app: "Dummy2", title: "Wooow", space: 1),
-                Window(id: 3, app: "Dummy3", title: "Wooow", space: 1)
+                Window(id: 1, app: "Dummy1", title: "Wooow", space: 1, pid: 0),
+                Window(id: 2, app: "Dummy2", title: "Wooow", space: 1, pid: 0),
+                Window(id: 3, app: "Dummy3", title: "Wooow", space: 1, pid: 0)
             ]
         }
         
@@ -309,7 +336,7 @@ private extension WindowSwitcherView {
                     newTitle = newTitle[newTitle.index(after: lastDashIndex)...].trimmingCharacters(in: .whitespaces)
                 }
 
-                return Window(id: window.id, app: window.app, title: newTitle, space: window.space)
+                return Window(id: window.id, app: window.app, title: newTitle, space: window.space, pid: window.pid)
             }
     }
 
