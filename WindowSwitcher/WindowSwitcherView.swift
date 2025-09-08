@@ -8,6 +8,8 @@
 import SwiftUI
 import Cocoa
 import Combine
+import ScreenCaptureKit
+import AVFoundation
 
 // MARK: - Models
 
@@ -19,13 +21,14 @@ struct Window: Identifiable, Decodable {
     let pid: pid_t
 }
 
+struct CachedSnapshot {
+    let image: NSImage
+    let createdAt: Date
+}
+
 extension Window {
     var runningApp: NSRunningApplication? {
         NSRunningApplication(processIdentifier: pid)
-    }
-
-    var bundleIdentifier: String? {
-        runningApp?.bundleIdentifier
     }
 
     var appIcon: NSImage? {
@@ -42,6 +45,10 @@ struct WindowSwitcherView: View {
     @State private var selectedIndex: Int = 0
     @State private var timer: AnyCancellable?
     @State private var footerCommands: String? = nil
+    @State private var previewImage: NSImage? = nil
+    
+    @State private var snapshotCache: [Int: CachedSnapshot] = [:] // Cache snapshots by window.id
+    private let snapshotValidity: TimeInterval = 60
     
     @FocusState private var isFocused
 
@@ -53,15 +60,23 @@ struct WindowSwitcherView: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            windowList
-            footer
+        HStack(spacing: 0) {
+            VStack(spacing: 0) {
+                header
+                windowList
+                footer
+            }
+            .frame(width: 400)
+            
+            Divider()
+            
+            previewPanel
+                .frame(width: 500)
         }
         .background(VisualEffectBlur(darkeningOpacity: 0.25))
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .foregroundStyle(.primary)
-        .frame(width: 750, height: 300)
+        .frame(width: 900, height: 400)
         .onAppear(perform: onAppear)
         .onExitCommand(perform: handleExitCommand)
         .onChange(of: filterText) { _ in
@@ -72,6 +87,11 @@ struct WindowSwitcherView: View {
 }
 
 // MARK: - Subviews
+extension Collection {
+    subscript(safe index: Index) -> Element? {
+        indices.contains(index) ? self[index] : nil
+    }
+}
 
 private extension WindowSwitcherView {
     var header: some View {
@@ -128,7 +148,8 @@ private extension WindowSwitcherView {
                             .background(
                                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                                     .fill(index == selectedIndex ? Color.white.opacity(0.15) : .clear)
-                            )                        }
+                            )
+                        }
                         .buttonStyle(.plain)
                         .id(index)
                     }
@@ -139,7 +160,52 @@ private extension WindowSwitcherView {
                 withAnimation(.easeInOut(duration: 0.15)) {
                     proxy.scrollTo(newIndex, anchor: .center)
                 }
+
+                Task {
+                    if let window = displayedWindows[safe: newIndex] {
+                        previewImage = await snapshot(of: window)
+                    } else {
+                        previewImage = nil
+                    }
+                }
             }
+        }
+    }
+    
+    var previewPanel: some View {
+        ZStack {
+            // Background blur covering the entire panel
+            VisualEffectBlur(darkeningOpacity: 0.4)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            
+            // Content
+            VStack(alignment: .leading, spacing: 4) {
+                if let img = previewImage {
+                    Image(nsImage: img)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    Text("No preview")
+                        .foregroundColor(.secondary)
+                        .italic()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                
+                // Debug info
+                if let window = displayedWindows[safe: selectedIndex] {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Title: \(window.title.isEmpty ? "(Untitled)" : window.title)")
+                        Text("App: \(window.app)")
+                        Text("Space: \(window.space)")
+                        Text("PID: \(window.pid)")
+                    }
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding([.vertical, .trailing], 4)
+                }
+            }
+            .padding()
         }
     }
     
@@ -182,6 +248,100 @@ private extension WindowSwitcherView {
         .background(VisualEffectBlur(darkeningOpacity: 0.4))
     }
 }
+
+// MARK: - Window Snapshots
+// MARK: - One-shot delegate for snapshots
+
+class SnapshotDelegate: NSObject, SCStreamOutput {
+    var continuation: CheckedContinuation<CMSampleBuffer?, Never>?
+
+    func stream(_ stream: SCStream,
+                didOutputSampleBuffer sampleBuffer: CMSampleBuffer,
+                of outputType: SCStreamOutputType) {
+        guard outputType == .screen, CMSampleBufferIsValid(sampleBuffer) else { return }
+        continuation?.resume(returning: sampleBuffer)
+        continuation = nil
+
+        Task { try? await stream.stopCapture() }
+    }
+}
+
+private extension WindowSwitcherView {
+    func snapshot(of window: Window) async -> NSImage? {
+        // Use cached snapshot if still valid
+        if let cached = snapshotCache[window.id],
+           Date().timeIntervalSince(cached.createdAt) < snapshotValidity {
+            print("📦 Using cached snapshot for '\(window.title)'")
+            return cached.image
+        }
+
+        do {
+            print("📸 Snapshot requested for window '\(window.title)', pid=\(window.pid)")
+
+            let content = try await SCShareableContent.current
+
+            guard let scWindow = content.windows.first(where: {
+                $0.owningApplication?.processID == window.pid &&
+                $0.isOnScreen &&
+                (window.title.isEmpty || ($0.title ?? "").localizedCaseInsensitiveContains(window.title))
+            }) else {
+                // fallback to old cached image if available
+                if let cached = snapshotCache[window.id] {
+                    return cached.image
+                }
+                return nil
+            }
+
+            let filter = SCContentFilter(desktopIndependentWindow: scWindow)
+            let config = SCStreamConfiguration()
+            config.width = Int(scWindow.frame.width)
+            config.height = Int(scWindow.frame.height)
+            
+            let stream = SCStream(filter: filter, configuration: config, delegate: nil)
+            let delegate = SnapshotDelegate()
+            try stream.addStreamOutput(delegate, type: .screen, sampleHandlerQueue: .main)
+
+            guard let frame = await withCheckedContinuation({ continuation in
+                delegate.continuation = continuation
+                Task {
+                    do { try await stream.startCapture() }
+                    catch {
+                        print("❌ Failed to start capture: \(error)")
+                        continuation.resume(returning: nil)
+                    }
+                }
+            }) else {
+                if let cached = snapshotCache[window.id] { return cached.image }
+                return nil
+            }
+
+            guard let ciImage = ciImage(from: frame) else {
+                if let cached = snapshotCache[window.id] { return cached.image }
+                return nil
+            }
+
+            let rep = NSCIImageRep(ciImage: ciImage)
+            let nsImage = NSImage(size: rep.size)
+            nsImage.addRepresentation(rep)
+
+            // Save to cache with timestamp
+            snapshotCache[window.id] = CachedSnapshot(image: nsImage, createdAt: Date())
+            print("✅ Snapshot captured for '\(window.title)' (\(rep.size.width)x\(rep.size.height))")
+            return nsImage
+
+        } catch {
+            print("❌ Snapshot error: \(error)")
+            if let cached = snapshotCache[window.id] { return cached.image }
+            return nil
+        }
+    }
+
+    private func ciImage(from sampleBuffer: CMSampleBuffer) -> CIImage? {
+        guard let pixelBuffer = sampleBuffer.imageBuffer else { return nil }
+        return CIImage(cvPixelBuffer: pixelBuffer)
+    }
+}
+
 
 // MARK: - Computed Properties
 
@@ -227,7 +387,7 @@ private extension WindowSwitcherView {
             queue: .main
         ) { _ in
             startAutoRefresh()
-            refreshWindows() // optional immediate refresh
+            refreshWindows()
         }
 
         NotificationCenter.default.addObserver(
@@ -240,10 +400,7 @@ private extension WindowSwitcherView {
     }
 
     private func startAutoRefresh() {
-        // Cancel existing timer if any
         timer?.cancel()
-        
-        // Run every 2 seconds
         timer = Timer.publish(every: 0.5, on: .main, in: .common)
             .autoconnect()
             .sink { _ in
@@ -307,7 +464,6 @@ private extension WindowSwitcherView {
             "/opt/homebrew/bin/yabai -m query --windows | jq -c '.[] | {id: .id, app: .app, title: .title, space: .space, pid: .pid}'"
         ]
 
-        
         let pipe = Pipe()
         task.standardOutput = pipe
         task.launch()
@@ -315,11 +471,7 @@ private extension WindowSwitcherView {
         guard
             let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)
         else {
-            return [
-                Window(id: 1, app: "Dummy1", title: "Wooow", space: 1, pid: 0),
-                Window(id: 2, app: "Dummy2", title: "Wooow", space: 1, pid: 0),
-                Window(id: 3, app: "Dummy3", title: "Wooow", space: 1, pid: 0)
-            ]
+            return []
         }
         
         let decoder = JSONDecoder()
@@ -328,16 +480,6 @@ private extension WindowSwitcherView {
             .compactMap { line in
                 line.data(using: .utf8).flatMap { try? decoder.decode(Window.self, from: $0) }
             }
-            .map { window in
-                let separators: [Character] = ["-", "—", "–"] // hyphen, em-dash, en-dash
-                var newTitle = window.title
-
-                if let lastDashIndex = newTitle.lastIndex(where: { separators.contains($0) }) {
-                    newTitle = newTitle[newTitle.index(after: lastDashIndex)...].trimmingCharacters(in: .whitespaces)
-                }
-
-                return Window(id: window.id, app: window.app, title: newTitle, space: window.space, pid: window.pid)
-            }
     }
 
     func refreshWindows() {
@@ -345,20 +487,28 @@ private extension WindowSwitcherView {
             let newWindows = loadWindows().sorted {
                 $0.app == $1.app ? $0.title < $1.title : $0.app < $1.app
             }
-            
+
             DispatchQueue.main.async {
                 self.cachedWindows = newWindows.isEmpty ? self.cachedWindows : newWindows
                 self.windows = newWindows
                 self.clampSelectedIndex()
+
+                //  Prepopulate snapshots to avoid blue icon flash
+                Task {
+                    for window in newWindows {
+                        if snapshotCache[window.id] == nil {
+                            _ = await snapshot(of: window)
+                        }
+                    }
+                }
             }
         }
     }
-    
+
     func focusWindow(_ window: Window) {
         let task = Process()
         task.launchPath = "/bin/zsh"
         
-        // Switch to the window's space first
         task.arguments = [
             "-c",
             "/opt/homebrew/bin/yabai -m space --focus \(window.space); /opt/homebrew/bin/yabai -m window --focus \(window.id)"
@@ -424,7 +574,6 @@ private extension WindowSwitcherView {
             MenuBarHandler.shared.quit()
         case "HELP":
             footerCommands = "/commands/: show_icon, hide_icon, toggle_dock, quit, help"
-
         default:
             print("Unknown command: \(command)")
         }

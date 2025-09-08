@@ -12,8 +12,8 @@ import KeyboardShortcuts
 final class FloatingPanelHandler {
     static let shared = FloatingPanelHandler()
     
-    private let width: CGFloat = 750
-    private let height: CGFloat = 300
+    private let width: CGFloat = 900
+    private let height: CGFloat = 400
     
     private var cachedWindows: [Window] = []
     private var lastPanelFrame: NSRect?
