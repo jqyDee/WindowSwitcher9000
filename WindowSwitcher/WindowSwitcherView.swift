@@ -50,6 +50,8 @@ struct WindowSwitcherView: View {
     @State private var snapshotCache: [Int: CachedSnapshot] = [:] // Cache snapshots by window.id
     private let snapshotValidity: TimeInterval = 60
     
+    @AppStorage("PreviewEnabled") private var isPreviewEnabled: Bool = true
+    
     @FocusState private var isFocused
 
     var onClose: (([Window]) -> Void)?
@@ -60,18 +62,22 @@ struct WindowSwitcherView: View {
     }
     
     var body: some View {
+        let searchWindowWidth: CGFloat = isPreviewEnabled == true ? 400 : 900
+        
         HStack(spacing: 0) {
             VStack(spacing: 0) {
                 header
                 windowList
                 footer
             }
-            .frame(width: 400)
+            .frame(width: searchWindowWidth)
             
             Divider()
             
-            previewPanel
-                .frame(width: 500)
+            if isPreviewEnabled {
+                previewPanel
+                    .frame(width: 500)
+            }
         }
         .background(VisualEffectBlur(darkeningOpacity: 0.25))
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -370,6 +376,7 @@ private extension WindowSwitcherView {
     func onAppear() {
         isFocused = true
         observePanelFocus()
+        refreshWindows()
     }
     
     func handleExitCommand() {

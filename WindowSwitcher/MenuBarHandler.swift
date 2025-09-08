@@ -13,6 +13,8 @@ import AppKit
 class MenuBarHandler {
     static let shared = MenuBarHandler()
     
+    @AppStorage("DockHidden") private var isDockHidden: Bool = true
+
     private var statusItem: NSStatusItem
     
     init() {
@@ -34,26 +36,37 @@ extension MenuBarHandler {
     }
     
     @objc func toggleDockIcon() {
-        if UserDefaults.standard.bool(forKey: "DockHidden") {
-            // HIDE
-            NSApp.setActivationPolicy(.regular)
-            UserDefaults.standard.set(false, forKey: "DockHidden")
-            NSApp.activate(ignoringOtherApps: true)
+        isDockHidden.toggle()
+        if isDockHidden {
+            NSApp.setActivationPolicy(.accessory)  // hide Dock
         } else {
-            // SHOW
-            NSApp.setActivationPolicy(.accessory)
-            UserDefaults.standard.set(true, forKey: "DockHidden")
+            NSApp.setActivationPolicy(.regular)   // show Dock
+            NSApp.activate(ignoringOtherApps: true)
         }
     }
-    
+
     @objc func quit() {
         print("MenuBarHandler : Quitting")
         NSApp.terminate(nil)
     }
     
-    @objc func checkAccessibilityPermission() -> Bool {
+    @objc func requestAccessibilityPermission(_ sender: NSMenuItem) {
         let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeRetainedValue() as NSString: true]
-        return AXIsProcessTrustedWithOptions(options)
+        _ = AXIsProcessTrustedWithOptions(options)
+        
+        DispatchQueue.main.asyncAfter(deadline: .now()) {
+            sender.state = self.checkAccessibilityPermission() ? .on : .off
+        }
+    }
+    
+    @objc func checkAccessibilityPermission() -> Bool {
+        return AXIsProcessTrusted()
+    }
+    
+    @objc func updateScreenRecordingMenuItem(_ sender: NSMenuItem) {
+        let granted = CGPreflightScreenCaptureAccess()
+        sender.state = granted ? .on : .off
+        print("Screen Recording permission: \(granted)")
     }
     
     @objc func openHotkeyPopover() {
@@ -65,6 +78,13 @@ extension MenuBarHandler {
         if let button = statusItem.button {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         }
+    }
+    
+    @objc func togglePreview(_ sender: NSMenuItem) {
+        let newState = !(UserDefaults.standard.bool(forKey: "PreviewEnabled"))
+        UserDefaults.standard.set(newState, forKey: "PreviewEnabled")
+        sender.state = newState ? .on : .off
+        print("MenuBarHandler : Preview is now \(newState ? "enabled" : "disabled")")
     }
 }
 
@@ -92,33 +112,62 @@ private extension MenuBarHandler {
         menu.addItem(makeMenuItem(
             title: "Toggle Switcher",
             action: #selector(toggleSwitcher),
-            key: ""
+            key: "o"
         ))
         
         menu.addItem(.separator())
         
         menu.addItem(makeMenuItem(
-            title: "Hide Menu Bar Icon",
+            title: "Show Menu Bar Icon",
             action: #selector(hideBarIcon)
         ))
         
-        menu.addItem(makeMenuItem(
-            title: "Toggle Dock Icon",
-            action: #selector(toggleDockIcon)
-        ))
+        let dockItem = NSMenuItem(
+            title: "Hide Dock Icon",
+            action: #selector(toggleDockIcon),
+            keyEquivalent: ""
+        )
+        dockItem.target = self
+        dockItem.state = isDockHidden ? .on : .off
+        menu.addItem(dockItem)
+
+        
+        let previewItem = NSMenuItem(
+            title: "Show Preview",
+            action: #selector(togglePreview),
+            keyEquivalent: ""
+        )
+        previewItem.target = self
+        previewItem.state = UserDefaults.standard.bool(forKey: "PreviewEnabled") ? .on : .off
+        menu.addItem(previewItem)
         
         menu.addItem(makeMenuItem(
             title: "Set Hotkey",
             action: #selector(openHotkeyPopover)
         ))
         
-        menu.addItem(makeMenuItem(
-            title: "Check Permissions",
-            action: #selector(checkAccessibilityPermission)
-        ))
-
         menu.addItem(.separator())
+
+        let accessibilityItem = NSMenuItem(
+            title: "Accessibility Permission",
+            action: #selector(requestAccessibilityPermission),
+            keyEquivalent: ""
+        )
+        accessibilityItem.target = self
+        accessibilityItem.state = checkAccessibilityPermission() ? .on : .off
+        menu.addItem(accessibilityItem)
         
+        let screenRecordingItem = NSMenuItem(
+            title: "Screen Recording Permission",
+            action: #selector(updateScreenRecordingMenuItem(_:)),
+            keyEquivalent: ""
+        )
+        screenRecordingItem.target = self
+        screenRecordingItem.state = CGPreflightScreenCaptureAccess() ? .on : .off
+        menu.addItem(screenRecordingItem)
+        
+        menu.addItem(.separator())
+
         menu.addItem(makeMenuItem(
             title: "Quit",
             action: #selector(quit),

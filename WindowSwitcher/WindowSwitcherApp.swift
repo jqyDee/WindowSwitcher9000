@@ -29,7 +29,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        _ = MenuBarHandler.shared.checkAccessibilityPermission()
+        // This will ask if not already granted
+        let options: NSDictionary = [
+            kAXTrustedCheckOptionPrompt.takeUnretainedValue() as NSString: true
+        ]
+        let granted = AXIsProcessTrustedWithOptions(options)
+        print("Accessibility permission granted: \(granted)")
         
         _ = MenuBarHandler.shared
         _ = FloatingPanelHandler.shared
