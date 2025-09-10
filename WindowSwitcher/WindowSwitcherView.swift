@@ -423,26 +423,31 @@ private extension WindowSwitcherView {
     
     var displayedWindows: [Window] {
         // Only running windows with non-empty title
-        let validWindows = windows.filter { !$0.title.isEmpty }
+        let validWindows = windows.filter { !$0.title.isEmpty || $0.app == "Finder" }
 
         var scoredWindows: [(Window, Int)] = validWindows.map {
             ($0, fuzzyScore(text: $0.title + " " + $0.app, pattern: filterText))
         }
 
-        // Only include launchable apps if filter text is not empty
+        // Include launchable apps even if they are running
         if !filterText.isEmpty {
             let launchableWindows: [(Window, Int)] = cachedLaunchableApps.compactMap { app in
                 let title = "Open \(app.name)"
                 guard title.lowercased().contains(filterText.lowercased()) else { return nil }
-                let score = fuzzyScore(text: title, pattern: filterText)
+                
+                // Check if a running app window already exists
+                let isRunning = NSRunningApplication.runningApplications(withBundleIdentifier: app.bundleID ?? "").first != nil
+
                 let window = Window(
-                    id: Int.random(in: Int.min..<0), // temporary negative ID, will never be focused by yabai
+                    id: Int.random(in: Int.min..<0),
                     app: app.name,
                     title: title,
                     space: 0,
-                    pid: 0,
+                    pid: isRunning ? NSRunningApplication.runningApplications(withBundleIdentifier: app.bundleID ?? "").first?.processIdentifier ?? 0 : 0,
                     icon: app.icon
                 )
+
+                let score = fuzzyScore(text: title, pattern: filterText)
                 return (window, score)
             }
             scoredWindows.append(contentsOf: launchableWindows)
@@ -537,14 +542,14 @@ private extension WindowSwitcherView {
     func selectWindow() {
         guard displayedWindows.indices.contains(selectedIndex) else { return }
         let window = displayedWindows[selectedIndex]
-
+        
         if window.pid == 0 {
             // Launchable app
             if let app = cachedLaunchableApps.first(where: { $0.name == window.app }) {
+                // Normal launchable app
                 if let bundleID = app.bundleID,
                    let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
                     
-                    // ✅ Modern API
                     let config = NSWorkspace.OpenConfiguration()
                     NSWorkspace.shared.openApplication(at: appURL, configuration: config) { app, error in
                         if let error = error {
@@ -552,15 +557,20 @@ private extension WindowSwitcherView {
                         }
                     }
                 } else {
-                    // Fallback: try opening by name via shell
+                    // Fallback: open by name via shell
                     let task = Process()
                     task.launchPath = "/usr/bin/open"
                     task.arguments = ["-a", window.app]
                     task.launch()
                 }
             }
+        } else if window.app == "Finder" {
+            let task = Process()
+            task.launchPath = "/usr/bin/open"
+            task.arguments = ["-a", window.app]
+            task.launch()
         } else {
-            // Running window
+            // Focus running window
             focusWindow(window)
         }
 
@@ -715,9 +725,10 @@ private extension WindowSwitcherView {
     private func installedLaunchableApps() -> [LaunchableApp] {
         var installed: [LaunchableApp] = []
 
-        let appDirs = FileManager.default.urls(for: .applicationDirectory, in: .systemDomainMask) +
-                      FileManager.default.urls(for: .applicationDirectory, in: .localDomainMask) +
-                      FileManager.default.urls(for: .applicationDirectory, in: .userDomainMask)
+        // Check user, local, and system Applications folders
+        let appDirs = FileManager.default.urls(for: .applicationDirectory, in: .localDomainMask) +
+                      FileManager.default.urls(for: .applicationDirectory, in: .userDomainMask) +
+                      [URL(fileURLWithPath: "/System/Applications")]
 
         for dir in appDirs {
             guard let appURLs = try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) else { continue }
@@ -726,13 +737,14 @@ private extension WindowSwitcherView {
                 let name = bundle?.infoDictionary?["CFBundleName"] as? String ?? url.deletingPathExtension().lastPathComponent
                 let bundleID = bundle?.bundleIdentifier
                 let icon = NSWorkspace.shared.icon(forFile: url.path)
+                icon.size = NSSize(width: 64, height: 64) // optional: scale nicely
                 installed.append(LaunchableApp(name: name, bundleID: bundleID, icon: icon))
             }
         }
 
         return installed
     }
-    
+
     private func launchableWindows(from apps: [LaunchableApp]) -> [Window] {
         apps.enumerated().map { idx, app in
             Window(
@@ -747,7 +759,15 @@ private extension WindowSwitcherView {
     
     private func loadLaunchableApps() {
         DispatchQueue.global(qos: .userInitiated).async {
-            let apps = installedLaunchableApps()
+            var apps = installedLaunchableApps()
+            
+            // Force-include Finder
+            if !apps.contains(where: { $0.name == "Finder" }) {
+                let finderIcon = NSWorkspace.shared.icon(forFile: "/System/Applications/Finder.app")
+                finderIcon.size = NSSize(width: 64, height: 64)
+                apps.append(LaunchableApp(name: "Finder", bundleID: "com.apple.finder", icon: finderIcon))
+            }
+            
             DispatchQueue.main.async {
                 self.cachedLaunchableApps = apps
             }
