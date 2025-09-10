@@ -715,7 +715,8 @@ private extension WindowSwitcherView {
     private func installedLaunchableApps() -> [LaunchableApp] {
         var installed: [LaunchableApp] = []
 
-        let appDirs = FileManager.default.urls(for: .applicationDirectory, in: .localDomainMask) +
+        let appDirs = FileManager.default.urls(for: .applicationDirectory, in: .systemDomainMask) +
+                      FileManager.default.urls(for: .applicationDirectory, in: .localDomainMask) +
                       FileManager.default.urls(for: .applicationDirectory, in: .userDomainMask)
 
         for dir in appDirs {
