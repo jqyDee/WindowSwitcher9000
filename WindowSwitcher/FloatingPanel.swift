@@ -39,11 +39,11 @@ final class FloatingPanel<Content: View>: NSPanel {
         level = .floating
         // CHOICE: move to the active space when shown (do NOT combine with canJoinAllSpaces)
         collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
-        animationBehavior = .utilityWindow
+        animationBehavior = .none
         
         // Make key behavior deterministic when we request focus programmatically
         becomesKeyOnlyIfNeeded = false
-        hidesOnDeactivate = true
+        hidesOnDeactivate = false
     }
     
     private func configureControls() {

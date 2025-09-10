@@ -118,14 +118,19 @@ private extension FloatingPanelHandler {
     }
     
     func showImmediately(_ panel: NSPanel) {
-        // Ensure panel will appear in the active Space and come to front
         panel.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
         
-        // Bring forward reliably
-        panel.alphaValue = 1
-        panel.orderFrontRegardless()      // ensures it becomes visible across apps
-        panel.makeKey()                   // get keyboard focus for controls
-        NSApp.activate(ignoringOtherApps: true) // keep app active
+        NSApp.activate(ignoringOtherApps: true)
+        panel.makeKeyAndOrderFront(nil)
+        
+        // Auto-close when the app loses focus
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didResignActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.closePanel()
+        }
     }
     
     func closePanel() {
