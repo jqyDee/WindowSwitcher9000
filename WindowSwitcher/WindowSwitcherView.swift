@@ -515,12 +515,12 @@ private extension WindowSwitcherView {
         guard !displayedWindows.isEmpty else { return }
         selectedIndex = (selectedIndex + 1) % displayedWindows.count
     }
-
+    
     func moveSelectionBackward() {
         guard !displayedWindows.isEmpty else { return }
         selectedIndex = (selectedIndex - 1 + displayedWindows.count) % displayedWindows.count
     }
-
+    
     func handleEnter() {
         if let command = extractCommand(from: filterText) {
             handleCommand(command)
@@ -529,7 +529,7 @@ private extension WindowSwitcherView {
         selectWindow()
         filterText = ""
     }
-
+    
     func handleEscape() {
         if !filterText.isEmpty {
             filterText = ""
@@ -546,34 +546,29 @@ private extension WindowSwitcherView {
         if window.pid == 0 {
             // Launchable app
             if let app = cachedLaunchableApps.first(where: { $0.name == window.app }) {
-                // Normal launchable app
-                if let bundleID = app.bundleID,
-                   let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
-                    
-                    let config = NSWorkspace.OpenConfiguration()
-                    NSWorkspace.shared.openApplication(at: appURL, configuration: config) { app, error in
-                        if let error = error {
-                            print("Failed to open \(app?.localizedName ?? window.app): \(error)")
+                if let bundleID = app.bundleID {
+                    if let runningApp = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first {
+                        runningApp.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+                    } else if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
+                        let config = NSWorkspace.OpenConfiguration()
+                        NSWorkspace.shared.openApplication(at: appURL, configuration: config) { app, error in
+                            if let error = error {
+                                print("Failed to open \(app?.localizedName ?? window.app): \(error)")
+                            }
                         }
                     }
                 } else {
-                    // Fallback: open by name via shell
                     let task = Process()
                     task.launchPath = "/usr/bin/open"
                     task.arguments = ["-a", window.app]
                     task.launch()
                 }
             }
-        } else if window.app == "Finder" {
-            let task = Process()
-            task.launchPath = "/usr/bin/open"
-            task.arguments = ["-a", window.app]
-            task.launch()
         } else {
-            // Focus running window
+            // Running app with a window (or none → handled by focusWindow fallback)
             focusWindow(window)
         }
-
+        
         onClose?(windows)
     }
 }
@@ -626,12 +621,26 @@ private extension WindowSwitcherView {
 
     func focusWindow(_ window: Window) {
         let task = Process()
+        let pipe = Pipe()
+        task.standardOutput = pipe
+        task.standardError = pipe
         task.launchPath = "/bin/zsh"
-        
         task.arguments = [
             "-c",
             "/opt/homebrew/bin/yabai -m space --focus \(window.space); /opt/homebrew/bin/yabai -m window --focus \(window.id)"
         ]
+        
+        task.terminationHandler = { process in
+            if process.terminationStatus != 0 {
+                // yabai failed → fallback
+                if let runningApp = window.runningApp {
+                    let task = Process()
+                    task.launchPath = "/usr/bin/open"
+                    task.arguments = ["-a", window.app]
+                    task.launch()
+                }
+            }
+        }
         
         task.launch()
     }
