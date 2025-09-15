@@ -30,7 +30,3 @@ struct WindowRowView: View {
         .buttonStyle(.plain)
     }
 }
-
-#Preview {
-    WindowRowView(window: <#T##Window#>, isSelected: <#T##Bool#>)
-}

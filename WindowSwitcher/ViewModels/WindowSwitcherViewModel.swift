@@ -103,7 +103,7 @@ public final class WindowSwitcherViewModel: ObservableObject {
     public func refreshWindows() async {
         do {
             let newWindows = try await yabai.queryWindows()
-            let carried = carryOverCachedSnapshots(from: newWindows)
+            let carried = carryOverCache(from: newWindows)
             let filtered = carried.filter { !$0.title.isEmpty }
             windows = filtered.sorted(by: Self.windowSort)
             recomputeDisplay()
@@ -213,12 +213,20 @@ public final class WindowSwitcherViewModel: ObservableObject {
         lhs.app == rhs.app ? lhs.title < rhs.title : lhs.app < rhs.app
     }
 
-    private func carryOverCachedSnapshots(from newWindows: [Window]) -> [Window] {
+    private func carryOverCache(from newWindows: [Window]) -> [Window] {
         newWindows.map { newWin in
-            if let old = windows.first(where: { $0.id == newWin.id && $0.pid == newWin.pid && $0.title == newWin.title }),
-               let cached = old.cachedSnapshot {
+            if let old = windows.first(where: {
+                $0.id == newWin.id &&
+                $0.pid == newWin.pid &&
+                $0.title == newWin.title
+            }) {
                 var win = newWin
-                win.cachedSnapshot = cached
+                if let snap = old.cachedSnapshot {
+                    win.cachedSnapshot = snap
+                }
+                if let icn = old.icon {
+                    win.icon = icn
+                }
                 return win
             } else {
                 return newWin
