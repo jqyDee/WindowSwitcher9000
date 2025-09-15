@@ -178,6 +178,7 @@ public final class WindowSwitcherViewModel: ObservableObject {
         }
     }
 
+    // kind of deprecated
     public func focusWindow(_ window: Window) {
         Task {
             do {
@@ -204,7 +205,8 @@ public final class WindowSwitcherViewModel: ObservableObject {
             }
             AppLauncher.openAppByName(window.app)
         } else {
-            focusWindow(window)
+            yabai.focusFast(space: window.space, windowId: "\(window.id)")
+            // focusWindow(window) // this is slow but has more error checking
         }
     }
 

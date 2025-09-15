@@ -74,7 +74,6 @@ struct WindowSwitcherView: View {
                             .id(idx)
                             .onTapGesture {
                                 vm.selectedIndex = idx
-                                vm.focusWindow(window)
                             }
                     }
                 }
