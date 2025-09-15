@@ -16,7 +16,7 @@ public struct Window: Identifiable, Codable {
 
     // runtime-only (not in hash/equality)
     public var icon: NSImage?
-    public var cachedScreenshot: Snapshot?
+    public var cachedSnapshot: Snapshot?
 
     enum CodingKeys: String, CodingKey {
         case id, app, title, space, pid

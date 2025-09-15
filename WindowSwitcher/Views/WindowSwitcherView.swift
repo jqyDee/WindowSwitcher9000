@@ -91,7 +91,6 @@ struct WindowSwitcherView: View {
     var previewPanel: some View {
         ZStack {
             VisualEffectBlur(darkeningOpacity: 0.35)
-                // .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
             VStack(alignment: .leading, spacing: 0) {
                 if let img = vm.previewImage {
@@ -116,6 +115,7 @@ struct WindowSwitcherView: View {
                         Text("Title: \(w.title.isEmpty ? "(Untitled)" : w.title)")
                         Text("App: \(w.app)")
                         Text("Space: \(w.space)")
+                        Text("ID (Yabai): \(w.id)")
                         Text("PID: \(w.pid)")
                     }
                     .font(.caption)
