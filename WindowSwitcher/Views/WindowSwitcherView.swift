@@ -41,14 +41,6 @@ struct WindowSwitcherView: View {
             footer
                 .frame(maxWidth: .infinity)
         }
-        .onAppear {
-            isFocused = true
-            Task {
-                await vm.refreshWindows()
-                vm.clampSelectedIndex()
-                vm.requestSnapshotForSelected()
-            }
-        }
     }
 
     // MARK: - parts
@@ -82,7 +74,6 @@ struct WindowSwitcherView: View {
                             .id(idx)
                             .onTapGesture {
                                 vm.selectedIndex = idx
-                                vm.requestSnapshotForSelected()
                                 vm.focusWindow(window)
                             }
                     }
@@ -93,7 +84,6 @@ struct WindowSwitcherView: View {
                 withAnimation(.easeInOut(duration: 0.15)) {
                     proxy.scrollTo(newIndex, anchor: .center)
                 }
-                vm.requestSnapshotForSelected()
             }
         }
     }

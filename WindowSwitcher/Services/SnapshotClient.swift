@@ -11,7 +11,7 @@ import Cocoa
 
 public protocol SnapshotServiceProtocol {
     @MainActor
-    func snapshot(window: Window, maxSize: CGSize) async throws -> NSImage
+    func snapshot(window: Window) async throws -> NSImage
 }
 
 public final class SnapshotService: SnapshotServiceProtocol {
@@ -19,7 +19,7 @@ public final class SnapshotService: SnapshotServiceProtocol {
 
     public init() {}
 
-    public func snapshot(window: Window, maxSize: CGSize = CGSize(width: 1200, height: 900)) async throws -> NSImage {
+    public func snapshot(window: Window) async throws -> NSImage {
         let content: SCShareableContent
         do {
             content = try await SCShareableContent.current
@@ -29,17 +29,25 @@ public final class SnapshotService: SnapshotServiceProtocol {
 
         guard let scWindow = content.windows.first(where: {
             $0.owningApplication?.processID == window.pid &&
-            $0.isOnScreen
+            $0.isOnScreen &&
+            (window.title.isEmpty || ($0.title ?? "").localizedCaseInsensitiveContains(window.title))
         }) else {
             throw SnapshotError.windowNotFound
         }
 
         let config = SCStreamConfiguration()
-        config.width  = Int(min(scWindow.frame.width, maxSize.width))
-        config.height = Int(min(scWindow.frame.height, maxSize.height))
+        config.width  = Int(scWindow.frame.width)
+        config.height = Int(scWindow.frame.height)
 
         let filter = SCContentFilter(desktopIndependentWindow: scWindow)
         let stream = SCStream(filter: filter, configuration: config, delegate: nil)
+
+        // Hold these strong until the task completes!
+        class StreamHolder {
+            var delegate: OneShotDelegate?
+            var stream: SCStream?
+        }
+        let holder = StreamHolder()
 
         return try await withCheckedThrowingContinuation { continuation in
             let delegate = OneShotDelegate { sampleBuffer in
@@ -51,11 +59,16 @@ public final class SnapshotService: SnapshotServiceProtocol {
                     continuation.resume(throwing: SnapshotError.captureFailed(nil))
                     return
                 }
-
                 continuation.resume(returning: image)
-
-                Task { try? await stream.stopCapture() }
+                // Stop stream and break strong ref
+                Task {
+                    try? await holder.stream?.stopCapture()
+                    holder.delegate = nil
+                    holder.stream = nil
+                }
             }
+            holder.delegate = delegate
+            holder.stream = stream
 
             do {
                 try stream.addStreamOutput(delegate, type: .screen, sampleHandlerQueue: .main)
@@ -63,10 +76,7 @@ public final class SnapshotService: SnapshotServiceProtocol {
             } catch {
                 continuation.resume(throwing: SnapshotError.captureFailed(error))
             }
-
-            // keep alive until the continuation resumes
-            withExtendedLifetime(delegate) {}
-            withExtendedLifetime(stream) {}
+            // Don't let ARC deallocate until completion via holder
         }
     }
 
@@ -77,7 +87,6 @@ public final class SnapshotService: SnapshotServiceProtocol {
         return NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
     }
 }
-
 private final class OneShotDelegate: NSObject, SCStreamOutput {
     let handler: (CMSampleBuffer?) -> Void
     init(handler: @escaping (CMSampleBuffer?) -> Void) { self.handler = handler }

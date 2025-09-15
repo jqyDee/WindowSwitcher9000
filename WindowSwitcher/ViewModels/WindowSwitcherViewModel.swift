@@ -6,7 +6,6 @@
 //
 
 
-// ViewModels/WindowSwitcherViewModel.swift
 import Foundation
 import AppKit
 import Combine
@@ -21,10 +20,13 @@ public final class WindowSwitcherViewModel: ObservableObject {
     @Published public var windows: [Window] = []
     @Published public var displayedWindows: [Window] = []
     @Published public var selectedIndex: Int = 0 {
-        didSet { requestSnapshotForSelected() }
+        didSet {
+            if oldValue != selectedIndex {
+                requestSnapshotForSelected()
+            }
+        }
     }
     @Published public var previewImage: NSImage? = nil
-    @Published public var snapshotCache: [String: NSImage] = [:]
     @Published public var hasScreenCaptureAccess: Bool? = nil
     @Published public var footerCommands: String? = nil
     @Published public var cachedLaunchableApps: [LaunchableApp] = []
@@ -45,7 +47,6 @@ public final class WindowSwitcherViewModel: ObservableObject {
 
         // react to filter changes
         $filterText
-            .debounce(for: .milliseconds(120), scheduler: DispatchQueue.main)
             .sink { [weak self] _ in
                 guard let self else { return }
                 Task {
@@ -56,28 +57,71 @@ public final class WindowSwitcherViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    @MainActor
     func initializeOnOpen() async {
         await refreshWindows()
         clampSelectedIndex()
-        requestSnapshotForSelected()   // 👈 runs AFTER refresh
         startAutoRefresh()
+        requestSnapshotForSelected()
     }
 
+    public func loadLaunchableApps() {
+        DispatchQueue.global(qos: .userInitiated).async {
+            var installed: [LaunchableApp] = []
+            
+            // Check user, local, and system Applications folders
+            let appDirs = FileManager.default.urls(for: .applicationDirectory, in: .localDomainMask) +
+            FileManager.default.urls(for: .applicationDirectory, in: .userDomainMask) +
+            [URL(fileURLWithPath: "/System/Applications")]
+            
+            for dir in appDirs {
+                guard let appURLs = try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) else { continue }
+                for url in appURLs where url.pathExtension == "app" {
+                    let bundle = Bundle(url: url)
+                    let name = bundle?.infoDictionary?["CFBundleName"] as? String ?? url.deletingPathExtension().lastPathComponent
+                    let bundleID = bundle?.bundleIdentifier
+                    let icon = NSWorkspace.shared.icon(forFile: url.path)
+                    icon.size = NSSize(width: 64, height: 64) // optional: scale nicely
+                    installed.append(LaunchableApp(name: name, bundleID: bundleID, icon: icon))
+                }
+            }
+            
+            var apps = installed
+            
+            // Force-include Finder
+            if !apps.contains(where: { $0.name == "Finder" }) {
+                let finderIcon = NSWorkspace.shared.icon(forFile: "/System/Applications/Finder.app")
+                finderIcon.size = NSSize(width: 64, height: 64)
+                apps.append(LaunchableApp(name: "Finder", bundleID: "com.apple.finder", icon: finderIcon))
+            }
+            
+            DispatchQueue.main.async {
+                self.cachedLaunchableApps = apps
+            }
+        }
+    }
 
     public func refreshWindows() async {
         do {
             let newWindows = try await yabai.queryWindows()
-            windows = newWindows.sorted { $0.app == $1.app ? $0.title < $1.title : $0.app < $1.app }
+            // Map over newWindows, carrying over any cached screenshot
+            let carried = newWindows.map { newWin in
+                if let old = windows.first(where: { $0.id == newWin.id && $0.pid == newWin.pid && $0.title == newWin.title }),
+                   let cached = old.cachedScreenshot
+                {
+                    var win = newWin
+                    win.cachedScreenshot = cached
+                    return win
+                } else {
+                    return newWin
+                }
+            }
+            windows = carried.sorted { $0.app == $1.app ? $0.title < $1.title : $0.app < $1.app }
             recomputeDisplay()
             clampSelectedIndex()
-            // pruneSnapshotCache()
         } catch {
-            // swallow or propagate error UI
             print("refresh windows error: \(error)")
         }
     }
-
     public func startAutoRefresh(interval: TimeInterval = 1.0) {
         refreshTask?.cancel()
         refreshTask = Task.detached { [weak self] in
@@ -94,17 +138,18 @@ public final class WindowSwitcherViewModel: ObservableObject {
         refreshTask = nil
     }
     
-    // TODO: Use
-    private func pruneSnapshotCache() {
-        let validIDs = Set(windows.map { $0.id })
-        snapshotCache = snapshotCache.filter { validIDs.contains($0.key) }
-    }
-    
     private func recomputeDisplay() {
         // simple fuzzy scoring: reuse your existing fuzzyScore implementation
         let filter = filterText.trimmingCharacters(in: .whitespacesAndNewlines)
-        var scored: [(Window, Int)] = windows.map { ($0, fuzzyScore(text: $0.title + " " + $0.app, pattern: filter)) }
-
+        var scored: [(Window, Int)] = windows.map { (w) in
+            // Look up the cached screenshot for this window (if any)
+            var windowWithCache = w
+            if let cached = self.windows.first(where: { $0.id == w.id && $0.pid == w.pid && $0.title == w.title })?.cachedScreenshot {
+                windowWithCache.cachedScreenshot = cached
+            }
+            return (windowWithCache, fuzzyScore(text: windowWithCache.title + " " + windowWithCache.app, pattern: filter))
+        }
+        
         // add launchable apps when filtering
         if !filter.isEmpty {
             let launchables = cachedLaunchableApps.compactMap { app -> (Window, Int)? in
@@ -120,7 +165,6 @@ public final class WindowSwitcherViewModel: ObservableObject {
                 return (win, fuzzyScore(text: title, pattern: filter))
             }
             scored.append(contentsOf: launchables)
-            print("\(launchables)")
         }
 
         displayedWindows = scored.sorted { $0.1 > $1.1 }.map { $0.0 }
@@ -149,18 +193,27 @@ public final class WindowSwitcherViewModel: ObservableObject {
 
         Task { @MainActor in
             do {
-                let img = try await snapshotService.snapshot(
-                    window: window,
-                    maxSize: CGSize(width: 1200, height: 800)
-                )
+                let img = try await snapshotService.snapshot(window: window)
                 previewImage = img
-                snapshotCache[window.id] = img
+                // Find and update the window in the windows array
+                if let idx = self.windows.firstIndex(where: { $0.id == window.id && $0.pid == window.pid && $0.title == window.title }) {
+                    var updated = self.windows[idx]
+                    updated.cachedScreenshot = Snapshot(image: img, createdAt: Date.now)
+                    self.windows[idx] = updated
+                    // Optionally, recompute displayedWindows if you want to immediately reflect the update
+                    self.recomputeDisplay()
+                }
                 hasScreenCaptureAccess = true
             } catch SnapshotError.permissionDenied {
                 hasScreenCaptureAccess = false
             } catch {
                 print("snapshot error: \(error)")
-                previewImage = snapshotCache[window.id] ?? nil
+                // Show cached image if available
+                if let cached = window.cachedScreenshot {
+                    previewImage = cached.image
+                } else {
+                    previewImage = nil
+                }
             }
         }
     }
@@ -210,7 +263,6 @@ public final class WindowSwitcherViewModel: ObservableObject {
     }
 
     private func fuzzyScore(text: String, pattern: String) -> Int {
-        // copy your existing algorithm; simplified here:
         guard !pattern.isEmpty else { return 1000 }
         let t = text.lowercased()
         let p = pattern.lowercased()
@@ -239,6 +291,7 @@ public final class WindowSwitcherViewModel: ObservableObject {
         return String(text[range]).uppercased()
     }
 
+    // TODO: not implemented
     private func handleCommand(_ command: String) {
         switch command {
         case "SHOW_ICON": break // wire up to menu bar manager

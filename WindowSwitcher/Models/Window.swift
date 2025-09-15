@@ -7,17 +7,16 @@
 
 import Cocoa
 
-
-/// Domain model used across the app. Decodes yabai JSON where `id` may be an Int or String.
-public struct Window: Identifiable, Codable, Hashable {
+public struct Window: Identifiable, Codable {
     public let id: String
     public let app: String
     public let title: String
     public let space: Int
     public let pid: pid_t
 
-    // runtime-only
+    // runtime-only (not in hash/equality)
     public var icon: NSImage?
+    public var cachedScreenshot: Snapshot?
 
     enum CodingKeys: String, CodingKey {
         case id, app, title, space, pid
@@ -34,19 +33,39 @@ public struct Window: Identifiable, Codable, Hashable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-
-        // yabai sometimes returns numbers for id
         if let intId = try? container.decode(Int.self, forKey: .id) {
             id = String(intId)
         } else {
             id = try container.decode(String.self, forKey: .id)
         }
-
         app = try container.decode(String.self, forKey: .app)
         title = try container.decode(String.self, forKey: .title)
         space = try container.decode(Int.self, forKey: .space)
         pid = try container.decode(Int32.self, forKey: .pid)
         icon = nil
+    }
+}
+
+// MARK: - Equatable & Hashable
+extension Window: Equatable {
+    public static func == (lhs: Window, rhs: Window) -> Bool {
+        // Only compare logical identity
+        lhs.id == rhs.id &&
+        lhs.app == rhs.app &&
+        lhs.title == rhs.title &&
+        lhs.space == rhs.space &&
+        lhs.pid == rhs.pid
+    }
+}
+
+extension Window: Hashable {
+    public func hash(into hasher: inout Hasher) {
+        // Only hash logical identity
+        hasher.combine(id)
+        hasher.combine(app)
+        hasher.combine(title)
+        hasher.combine(space)
+        hasher.combine(pid)
     }
 }
 

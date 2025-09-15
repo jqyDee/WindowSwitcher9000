@@ -51,6 +51,7 @@ extension FloatingPanelHandler {
     private func openPanel() {
         let vm = WindowSwitcherViewModel()
         vm.windows = cachedWindows
+        vm.loadLaunchableApps()
         self.vm = vm
         
         let view = WindowSwitcherView(vm: vm) // raw view, no modifiers
@@ -148,7 +149,6 @@ extension FloatingPanelHandler {
         vm?.stopAutoRefresh()
         
         // Clean up VM and observers
-        vm = nil
         if let observer = didResignActiveObserver {
             NotificationCenter.default.removeObserver(observer)
             didResignActiveObserver = nil
