@@ -45,19 +45,21 @@ public struct CommandHandler {
     public static func handle(_ command: Command) -> String? {
         switch command {
         case .showIcon:
-            // TODO: Implement logic as needed
-            break
+            MenuBarHandler.shared.showBarIcon()
+            return "Menu Bar Icon shown"
         case .hideIcon:
-            break
+            MenuBarHandler.shared.hideBarIcon()
+            return "Menu Bar Icon hidden"
         case .toggleDock:
-            break
+            MenuBarHandler.shared.toggleDockIcon()
+            return "Toggled Dock Icon \(MenuBarHandler.shared.isDockHidden == false ? "on" : "off")"
         case .quit:
-            break
+            MenuBarHandler.shared.quit()
+            return "Quitting"
         case .help:
             return "/commands/: show_icon, hide_icon, toggle_dock, quit, help"
         case .unknown:
             return nil
         }
-        return nil
     }
 }

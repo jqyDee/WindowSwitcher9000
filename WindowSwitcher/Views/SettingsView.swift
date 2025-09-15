@@ -25,7 +25,3 @@ struct SettingsView: View {
 extension KeyboardShortcuts.Name {
     static let openHotkeyWindow = Self("openHotkeyWindow")
 }
-
-#Preview {
-    SettingsView()
-}

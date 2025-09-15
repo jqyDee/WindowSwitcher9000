@@ -26,11 +26,24 @@ public final class SnapshotService: SnapshotServiceProtocol {
         } catch {
             throw SnapshotError.permissionDenied
         }
-
+        
+        
+        
         guard let scWindow = content.windows.first(where: {
-            $0.owningApplication?.processID == window.pid &&
-            $0.isOnScreen &&
-            (window.title.isEmpty || ($0.title ?? "").localizedCaseInsensitiveContains(window.title))
+            guard let owningPID = $0.owningApplication?.processID else { return false }
+            
+            // Check title match
+            let titleMatches = window.title.isEmpty || ($0.title ?? "").localizedCaseInsensitiveContains(window.title)
+            
+            // Check windowID match if possible
+            let idMatches: Bool
+            if let windowId = UInt32(window.id) {
+                idMatches = $0.windowID == windowId
+            } else {
+                idMatches = true
+            }
+            
+            return owningPID == window.pid && titleMatches && idMatches
         }) else {
             throw SnapshotError.windowNotFound
         }
@@ -50,7 +63,12 @@ public final class SnapshotService: SnapshotServiceProtocol {
         let holder = StreamHolder()
 
         return try await withCheckedThrowingContinuation { continuation in
+            var didResume = false
+
             let delegate = OneShotDelegate { sampleBuffer in
+                guard !didResume else { return }
+                didResume = true
+
                 guard
                     let sample = sampleBuffer,
                     CMSampleBufferIsValid(sample),
@@ -59,7 +77,9 @@ public final class SnapshotService: SnapshotServiceProtocol {
                     continuation.resume(throwing: SnapshotError.captureFailed(nil))
                     return
                 }
+
                 continuation.resume(returning: image)
+
                 // Stop stream and break strong ref
                 Task {
                     try? await holder.stream?.stopCapture()
@@ -74,9 +94,11 @@ public final class SnapshotService: SnapshotServiceProtocol {
                 try stream.addStreamOutput(delegate, type: .screen, sampleHandlerQueue: .main)
                 Task { try await stream.startCapture() }
             } catch {
-                continuation.resume(throwing: SnapshotError.captureFailed(error))
+                if !didResume {
+                    didResume = true
+                    continuation.resume(throwing: SnapshotError.captureFailed(error))
+                }
             }
-            // Don't let ARC deallocate until completion via holder
         }
     }
 

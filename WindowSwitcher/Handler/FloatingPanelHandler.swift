@@ -134,7 +134,9 @@ extension FloatingPanelHandler {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.closePanel()
+            Task { @MainActor in
+                self?.closePanel()
+            }
         }
     }
     

@@ -18,16 +18,14 @@ public final class WindowSwitcherViewModel: ObservableObject {
     @Published public var displayedWindows: [Window] = []
     @Published public var selectedIndex: Int = 0 {
         didSet {
-            if oldValue != selectedIndex {
-                requestSnapshotForSelected()
-            }
+            requestSnapshotForSelected()
         }
     }
     @Published public var previewImage: NSImage? = nil
     @Published public var hasScreenCaptureAccess: Bool? = nil
     @Published public var footerCommands: String? = nil
     @Published public var cachedLaunchableApps: [LaunchableApp] = []
-
+    
     // MARK: - Dependencies
     private let yabai: YabaiServiceProtocol
     private let snapshotService: SnapshotServiceProtocol
@@ -71,7 +69,9 @@ public final class WindowSwitcherViewModel: ObservableObject {
         DispatchQueue.global(qos: .userInitiated).async {
             let appDirs = FileManager.default.urls(for: .applicationDirectory, in: .localDomainMask) +
                           FileManager.default.urls(for: .applicationDirectory, in: .userDomainMask) +
-                          [URL(fileURLWithPath: "/System/Applications")]
+                          [URL(fileURLWithPath: "/System/Applications")] +
+                          [URL(fileURLWithPath: "/System/Applications/Utilities")]
+            
             var installed: [LaunchableApp] = []
 
             for dir in appDirs {
@@ -149,6 +149,7 @@ public final class WindowSwitcherViewModel: ObservableObject {
         // no snapshots for not even possibly visible windows
         let window = displayedWindows[selectedIndex]
         if window.space == 0 {
+            previewImage = nil
             return
         }
         
@@ -256,7 +257,7 @@ public final class WindowSwitcherViewModel: ObservableObject {
     }
 
     private func recomputeDisplay() {
-        let filter = filterText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let filter = filterText.trimmed
         var scored: [(Window, Int)] = windows.map { w in
             var windowWithCache = w
             if let cached = self.windows.first(where: { $0.id == w.id && $0.pid == w.pid && $0.title == w.title })?.cachedSnapshot {

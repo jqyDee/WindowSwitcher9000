@@ -7,20 +7,27 @@
 
 import SwiftUI
 import AppKit
+import Darwin
+import MachO
+import Foundation
 
 // MARK: - Menu Bar Handler
 
 class MenuBarHandler {
     static let shared = MenuBarHandler()
     
-    @AppStorage("DockHidden") private var isDockHidden: Bool = true
+    @AppStorage("DockHidden") public var isDockHidden: Bool = true
 
     private var statusItem: NSStatusItem
+    
+    private var memoryMenuItem: NSMenuItem?
+    private var memoryRefresher: AutoRefreshService?
     
     init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         setupMenuBar()
         showBarIcon()
+        startMemoryMonitoring()
     }
 }
 
@@ -117,6 +124,17 @@ private extension MenuBarHandler {
         
         menu.addItem(.separator())
         
+        // Memory usage item
+        let memItem = NSMenuItem(
+            title: "Memory Usage: -- MB",
+            action: nil,
+            keyEquivalent: ""
+        )
+        memoryMenuItem = memItem
+        menu.addItem(memItem)
+        
+        menu.addItem(.separator())
+        
         menu.addItem(makeMenuItem(
             title: "Show Menu Bar Icon",
             action: #selector(hideBarIcon)
@@ -196,3 +214,37 @@ private extension MenuBarHandler {
         FloatingPanelHandler.shared.togglePanel()
     }
 }
+
+private extension MenuBarHandler {
+    func currentMemoryMB() -> Double {
+        var info = task_vm_info_data_t()
+        var count = mach_msg_type_number_t(MemoryLayout.size(ofValue: info) / MemoryLayout<natural_t>.size)
+        
+        let kerr = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
+            }
+        }
+        
+        guard kerr == KERN_SUCCESS else { return 0 }
+        return Double(info.phys_footprint) / 1024.0 / 1024.0
+    }
+    
+    func startMemoryMonitoring(interval: TimeInterval = 5.0) {
+        memoryRefresher?.stop()
+        let weakSelf = self
+
+        memoryRefresher = AutoRefreshService(interval: interval) { @Sendable in
+            Task { @MainActor in
+                weakSelf.updateMemoryMenuItem()
+            }
+        }
+        memoryRefresher?.start()
+    }
+    
+    func updateMemoryMenuItem() {
+        let memMB = currentMemoryMB()
+        memoryMenuItem?.title = String(format: "Memory Usage: %.1f MB", memMB)
+    }
+}
+

@@ -63,7 +63,7 @@ public actor YabaiClient: YabaiServiceProtocol {
 
     public func focus(space: Int, windowId: String) async throws {
         // run space focus then window focus
-        _ = try run(arguments: ["-m", "space", "--focus", "\(space)"])
+        // _ = try run(arguments: ["-m", "space", "--focus", "\(space)"])
         _ = try run(arguments: ["-m", "window", "--focus", windowId])
     }
 }
