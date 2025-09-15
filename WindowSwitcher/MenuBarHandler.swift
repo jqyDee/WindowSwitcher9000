@@ -191,7 +191,7 @@ private extension MenuBarHandler {
         print("MenuBarHandler : Status bar icon clicked")
     }
     
-    @objc func toggleSwitcher() {
+    @MainActor @objc func toggleSwitcher() {
         print("MenuBarHandler : Toggle switcher")
         FloatingPanelHandler.shared.togglePanel()
     }

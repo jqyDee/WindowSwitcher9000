@@ -4,7 +4,12 @@
 <dict>
 	<key>SchemeUserState</key>
 	<dict>
-		<key>WindowSwitcher.xcscheme_^#shared#^_</key>
+		<key>W1.xcscheme</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>1</integer>
+		</dict>
+		<key>WindowSwitcher.xcscheme</key>
 		<dict>
 			<key>orderHint</key>
 			<integer>0</integer>
