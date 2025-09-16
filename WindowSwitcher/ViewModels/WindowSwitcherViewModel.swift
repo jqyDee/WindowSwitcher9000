@@ -260,32 +260,54 @@ public final class WindowSwitcherViewModel: ObservableObject {
 
     private func recomputeDisplay() {
         let filter = filterText.trimmed
-        var scored: [(Window, Int)] = windows.map { w in
+
+        // 1. Real windows
+        var scored: [(Window, Double)] = windows.map { w in
             var windowWithCache = w
             if let cached = self.windows.first(where: { $0.id == w.id && $0.pid == w.pid && $0.title == w.title })?.cachedSnapshot {
                 windowWithCache.cachedSnapshot = cached
             }
-            return (windowWithCache, FuzzySearch.score(text: windowWithCache.title + " " + windowWithCache.app, pattern: filter))
+
+            let text = windowWithCache.title + " " + windowWithCache.app
+            var score = FuzzySearch.score(text: text, pattern: filter) ?? -Double.infinity
+
+            // Bias for real windows
+            score += 0.5
+
+            return (windowWithCache, score)
         }
 
+        // 2. Launchables
         if !filter.isEmpty {
-            let launchables = cachedLaunchableApps.compactMap { app -> (Window, Int)? in
+            let launchables = cachedLaunchableApps.compactMap { app -> (Window, Double)? in
                 let title = "Open \(app.name)"
-                guard title.lowercased().contains(filter.lowercased()) else { return nil }
-                let isRunning = app.bundleID.flatMap { NSRunningApplication.runningApplications(withBundleIdentifier: $0).first } != nil
+                guard let scoreRaw = FuzzySearch.score(text: title, pattern: filter) else { return nil }
+
+                // Slight penalty for launchables
+                let score = scoreRaw - 0.5
+
+                let isRunning = app.bundleID.flatMap {
+                    NSRunningApplication.runningApplications(withBundleIdentifier: $0).first
+                } != nil
+
                 let win = Window(
                     id: "launch:\(app.bundleID ?? app.name)",
                     app: app.name,
                     title: title,
                     space: 0,
-                    pid: isRunning ? (NSRunningApplication.runningApplications(withBundleIdentifier: app.bundleID ?? "").first?.processIdentifier ?? 0) : 0,
+                    pid: isRunning
+                        ? (NSRunningApplication.runningApplications(withBundleIdentifier: app.bundleID ?? "").first?.processIdentifier ?? 0)
+                        : 0,
                     icon: app.icon
                 )
-                return (win, FuzzySearch.score(text: title, pattern: filter))
+                return (win, score)
             }
             scored.append(contentsOf: launchables)
         }
 
-        displayedWindows = scored.sorted { $0.1 > $1.1 }.map { $0.0 }
+        // 3. Sort & apply
+        displayedWindows = scored
+            .sorted { $0.1 > $1.1 }
+            .map { $0.0 }
     }
 }
