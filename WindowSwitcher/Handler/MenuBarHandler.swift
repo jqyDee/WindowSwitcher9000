@@ -7,20 +7,27 @@
 
 import SwiftUI
 import AppKit
+import Darwin
+import MachO
+import Foundation
 
 // MARK: - Menu Bar Handler
 
 class MenuBarHandler {
     static let shared = MenuBarHandler()
     
-    @AppStorage("DockHidden") private var isDockHidden: Bool = true
+    @AppStorage("DockHidden") public var isDockHidden: Bool = true
 
     private var statusItem: NSStatusItem
+    
+    private var memoryMenuItem: NSMenuItem?
+    private var memoryRefresher: AutoRefreshService?
     
     init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         setupMenuBar()
         showBarIcon()
+        startMemoryMonitoring()
     }
 }
 
@@ -63,7 +70,7 @@ extension MenuBarHandler {
         return AXIsProcessTrusted()
     }
     
-    @objc func updateScreenRecordingMenuItem(_ sender: NSMenuItem) {
+    @objc func checkScreenRecordingPermission(_ sender: NSMenuItem) {
         let granted = CGPreflightScreenCaptureAccess()
         sender.state = granted ? .on : .off
         print("Screen Recording permission: \(granted)")
@@ -85,6 +92,12 @@ extension MenuBarHandler {
         UserDefaults.standard.set(newState, forKey: "PreviewEnabled")
         sender.state = newState ? .on : .off
         print("MenuBarHandler : Preview is now \(newState ? "enabled" : "disabled")")
+    }
+    
+    @objc func resetPanelFrame() {
+        Task { @MainActor in
+            FloatingPanelHandler.shared.resetPanelFrame()
+        }
     }
 }
 
@@ -117,23 +130,34 @@ private extension MenuBarHandler {
         
         menu.addItem(.separator())
         
+        // Memory usage item
+        let memItem = NSMenuItem(
+            title: "Memory Usage: -- MB",
+            action: nil,
+            keyEquivalent: ""
+        )
+        memoryMenuItem = memItem
+        menu.addItem(memItem)
+        
+        menu.addItem(.separator())
+        
         menu.addItem(makeMenuItem(
-            title: "Show Menu Bar Icon",
+            title: "Hide Menu Bar Icon",
             action: #selector(hideBarIcon)
         ))
         
         let dockItem = NSMenuItem(
-            title: "Hide Dock Icon",
+            title: "Dock Icon",
             action: #selector(toggleDockIcon),
             keyEquivalent: ""
         )
         dockItem.target = self
-        dockItem.state = isDockHidden ? .on : .off
+        dockItem.state = isDockHidden ? .off : .on
         menu.addItem(dockItem)
 
         
         let previewItem = NSMenuItem(
-            title: "Show Preview",
+            title: "Preview",
             action: #selector(togglePreview),
             keyEquivalent: ""
         )
@@ -144,6 +168,11 @@ private extension MenuBarHandler {
         menu.addItem(makeMenuItem(
             title: "Set Hotkey",
             action: #selector(openHotkeyPopover)
+        ))
+        
+        menu.addItem(makeMenuItem(
+            title: "Reset Panel Frame",
+            action: #selector(resetPanelFrame)
         ))
         
         menu.addItem(.separator())
@@ -159,7 +188,7 @@ private extension MenuBarHandler {
         
         let screenRecordingItem = NSMenuItem(
             title: "Screen Recording Permission",
-            action: #selector(updateScreenRecordingMenuItem(_:)),
+            action: #selector(checkScreenRecordingPermission(_:)),
             keyEquivalent: ""
         )
         screenRecordingItem.target = self
@@ -191,8 +220,44 @@ private extension MenuBarHandler {
         print("MenuBarHandler : Status bar icon clicked")
     }
     
-    @objc func toggleSwitcher() {
+    @MainActor @objc func toggleSwitcher() {
         print("MenuBarHandler : Toggle switcher")
         FloatingPanelHandler.shared.togglePanel()
     }
 }
+
+// MARK: - Memory
+
+private extension MenuBarHandler {
+    func currentMemoryMB() -> Double {
+        var info = task_vm_info_data_t()
+        var count = mach_msg_type_number_t(MemoryLayout.size(ofValue: info) / MemoryLayout<natural_t>.size)
+        
+        let kerr = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
+            }
+        }
+        
+        guard kerr == KERN_SUCCESS else { return 0 }
+        return Double(info.phys_footprint) / 1024.0 / 1024.0
+    }
+    
+    func startMemoryMonitoring(interval: TimeInterval = 5.0) {
+        memoryRefresher?.stop()
+        let weakSelf = self
+
+        memoryRefresher = AutoRefreshService(interval: interval) { @Sendable in
+            Task { @MainActor in
+                weakSelf.updateMemoryMenuItem()
+            }
+        }
+        memoryRefresher?.start()
+    }
+    
+    func updateMemoryMenuItem() {
+        let memMB = currentMemoryMB()
+        memoryMenuItem?.title = String(format: "Memory Usage: %.1f MB", memMB)
+    }
+}
+

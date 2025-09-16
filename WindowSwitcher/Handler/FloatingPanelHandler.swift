@@ -1,8 +1,8 @@
 //
-// FloatingPanelHandler.swift
-// WindowSwitcher
+//  FloatingPanelHandler.swift
+//  WindowSwitcher
 //
-// Created by Matti Fischbach on 02.09.25.
+//  Created by Matti Fischbach on 02.09.25.
 //
 
 import SwiftUI
@@ -17,10 +17,13 @@ final class FloatingPanelHandler {
     
     private var cachedWindows: [Window] = []
     private var lastPanelFrame: NSRect?
-    private var panel: FloatingPanel<WindowSwitcherView>?
     
-    // Activation-wait bookkeeping
-    private var activationObserver: Any?
+    private var panel: FloatingPanel<WindowSwitcherView>?
+    private var vm: WindowSwitcherViewModel?
+    
+    // Observers
+    private var didBecomeActiveObserver: Any?
+    private var didResignActiveObserver: Any?
     private var isScheduledToShow = false
     
     private init() {
@@ -31,136 +34,156 @@ final class FloatingPanelHandler {
     
     // MARK: - Public API
     
+    @MainActor
     func togglePanel() {
-        guard let panel = panel else {
-            openPanel()
-            return
-        }
-        
-        if panel.isKeyWindow {
-            closePanel()
+        if let panel = panel {
+            panel.isKeyWindow ? closePanel() : showPanel(panel)
         } else {
-            showPanel(panel)
+            openPanel()
         }
     }
 }
 
-
 // MARK: - Panel Management
 
-private extension FloatingPanelHandler {
-    func openPanel() {
-        let view = WindowSwitcherView(
-            initialWindows: cachedWindows,
-            onClose: { [weak self] windows in
-                self?.cachedWindows = windows
-                self?.closePanel()
-            }
-        )
+extension FloatingPanelHandler {
+    @MainActor
+    private func openPanel() {
+        let vm = WindowSwitcherViewModel()
+        vm.windows = cachedWindows
+        vm.loadLaunchableApps()
+        self.vm = vm
         
+        let view = WindowSwitcherView(vm: vm) // raw view, no modifiers
         let frame = lastPanelFrame ?? NSRect(x: 0, y: 0, width: width, height: height)
         
-        // Create panel only once
         if panel == nil {
             panel = makePanel(with: view, frame: frame)
-            if lastPanelFrame == nil {
-                panel?.center()
-            }
+            panel?.center()
         } else {
-            // Refresh content if panel already exists
+            // Reuse existing panel
             panel?.contentView = NSHostingView(rootView: view)
         }
         
-        if let panel = panel {
-            showPanel(panel)
+        showPanel(panel!)
+    }
+    
+    private func showPanel(_ panel: NSPanel) {
+        guard !panel.isVisible else { return }
+        
+        if NSApp.isActive {
+            showImmediately(panel)
+        } else {
+            scheduleShowAfterActivation(panel)
         }
     }
     
-    func showPanel(_ panel: NSPanel) {
-        // If app is already active, show immediately
-        if NSApp.isActive {
-            showImmediately(panel)
-            return
-        }
-        
-        // Otherwise: activate app, then wait for didBecomeActive (robust) with a fallback
-        guard !isScheduledToShow else { return } // already scheduled
+    private func scheduleShowAfterActivation(_ panel: NSPanel) {
+        guard !isScheduledToShow else { return }
         isScheduledToShow = true
         
         NSApp.activate(ignoringOtherApps: true)
         
-        activationObserver = NotificationCenter.default.addObserver(
+        didBecomeActiveObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didBecomeActiveNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
             guard let self = self else { return }
-            self.clearActivationObserver()
+            self.clearDidBecomeActiveObserver()
             self.showImmediately(panel)
         }
         
-        // Fallback in case notification doesn't arrive fast enough
+        // Fallback in case notification is delayed
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
             guard let self = self else { return }
             if self.isScheduledToShow {
-                self.clearActivationObserver()
+                self.clearDidBecomeActiveObserver()
                 self.showImmediately(panel)
             }
         }
     }
     
-    func clearActivationObserver() {
-        if let obs = activationObserver {
-            NotificationCenter.default.removeObserver(obs)
-            activationObserver = nil
+    private func clearDidBecomeActiveObserver() {
+        if let observer = didBecomeActiveObserver {
+            NotificationCenter.default.removeObserver(observer)
+            didBecomeActiveObserver = nil
         }
         isScheduledToShow = false
     }
     
-    func showImmediately(_ panel: NSPanel) {
+    private func showImmediately(_ panel: NSPanel) {
         panel.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
-        
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
         
-        // Auto-close when the app loses focus
-        NotificationCenter.default.addObserver(
+        Task { await vm?.initializeOnOpen() }
+        
+        // Add resign-active observer only once
+        addResignActiveObserver()
+    }
+    
+    private func addResignActiveObserver() {
+        // Remove previous observer if any
+        if let observer = didResignActiveObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        
+        didResignActiveObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didResignActiveNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.closePanel()
+            Task { @MainActor in
+                self?.closePanel()
+            }
         }
     }
     
+    @MainActor
     func closePanel() {
         guard let panel else { return }
         lastPanelFrame = panel.frame
         
-        // Hide but keep the instance for reuse
+        // Hide panel
         panel.orderOut(nil)
+        
+        vm?.stopAutoRefresh()
+        
+        // Clean up VM and observers
+        if let observer = didResignActiveObserver {
+            NotificationCenter.default.removeObserver(observer)
+            didResignActiveObserver = nil
+        }
     }
     
-    func makePanel(with view: WindowSwitcherView, frame: NSRect) -> FloatingPanel<WindowSwitcherView> {
+    private func makePanel(with view: WindowSwitcherView, frame: NSRect) -> FloatingPanel<WindowSwitcherView> {
         let panel = FloatingPanel(
             view: { view },
             contentRect: frame,
-            didClose: { /* we manage close ourselves */ }
+            didClose: { /* handled manually */ }
         )
         
         panel.isOpaque = false
         panel.backgroundColor = .clear
         style(panel)
-        
         return panel
     }
     
-    func style(_ panel: NSPanel) {
+    private func style(_ panel: NSPanel) {
         guard let contentView = panel.contentView else { return }
         contentView.wantsLayer = true
         contentView.layer?.cornerRadius = 10
         contentView.layer?.borderWidth = 0.4
         contentView.layer?.borderColor = CGColor(gray: 0.7, alpha: 0.8)
         contentView.layer?.masksToBounds = false
+    }
+    
+    @MainActor
+    func resetPanelFrame() {
+        closePanel()
+        
+        panel = nil
+        lastPanelFrame = nil
     }
 }

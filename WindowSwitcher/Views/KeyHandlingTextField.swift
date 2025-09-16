@@ -10,8 +10,8 @@ import AppKit
 
 struct KeyHandlingTextField: NSViewRepresentable {
     @Binding var text: String
-    @FocusState var isFocused: Bool
-
+    var isFocused: FocusState<Bool>.Binding
+    
     var onEnter: (() -> Void)?
     var onEscape: (() -> Void)?
     var onTab: (() -> Void)?
@@ -32,7 +32,7 @@ struct KeyHandlingTextField: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSTextField, context: Context) {
         nsView.stringValue = text
-        if isFocused && nsView.window?.firstResponder != nsView.currentEditor() {
+        if isFocused.wrappedValue && nsView.window?.firstResponder != nsView.currentEditor() {
             nsView.window?.makeFirstResponder(nsView)
         }
     }
