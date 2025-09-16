@@ -178,4 +178,12 @@ extension FloatingPanelHandler {
         contentView.layer?.borderColor = CGColor(gray: 0.7, alpha: 0.8)
         contentView.layer?.masksToBounds = false
     }
+    
+    @MainActor
+    func resetPanelFrame() {
+        closePanel()
+        
+        panel = nil
+        lastPanelFrame = nil
+    }
 }

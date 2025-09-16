@@ -8,12 +8,13 @@
 import Foundation
 import AppKit
 import Combine
+import SwiftUI
 
 @MainActor
 public final class WindowSwitcherViewModel: ObservableObject {
     // MARK: - Published Properties (Inputs & Outputs)
+    @AppStorage("PreviewEnabled") public var isPreviewEnabled: Bool = true
     @Published public var filterText: String = ""
-    @Published public var isPreviewEnabled: Bool = true
     @Published public var windows: [Window] = []
     @Published public var displayedWindows: [Window] = []
     @Published public var selectedIndex: Int = 0 {
@@ -196,7 +197,7 @@ public final class WindowSwitcherViewModel: ObservableObject {
         }
         guard displayedWindows.indices.contains(selectedIndex) else { return }
         let window = displayedWindows[selectedIndex]
-        if window.pid == 0 {
+        if window.pid == 0 || window.id.starts(with: "launch:"){
             if let app = cachedLaunchableApps.first(where: { $0.name == window.app }) {
                 if let bundleID = app.bundleID {
                     AppLauncher.openAppByBundleIdentifier(bundleID)
@@ -206,7 +207,6 @@ public final class WindowSwitcherViewModel: ObservableObject {
             AppLauncher.openAppByName(window.app)
         } else {
             yabai.focusFast(space: window.space, windowId: "\(window.id)")
-            // focusWindow(window) // this is slow but has more error checking
         }
     }
 

@@ -70,7 +70,7 @@ extension MenuBarHandler {
         return AXIsProcessTrusted()
     }
     
-    @objc func updateScreenRecordingMenuItem(_ sender: NSMenuItem) {
+    @objc func checkScreenRecordingPermission(_ sender: NSMenuItem) {
         let granted = CGPreflightScreenCaptureAccess()
         sender.state = granted ? .on : .off
         print("Screen Recording permission: \(granted)")
@@ -92,6 +92,12 @@ extension MenuBarHandler {
         UserDefaults.standard.set(newState, forKey: "PreviewEnabled")
         sender.state = newState ? .on : .off
         print("MenuBarHandler : Preview is now \(newState ? "enabled" : "disabled")")
+    }
+    
+    @objc func resetPanelFrame() {
+        Task { @MainActor in
+            FloatingPanelHandler.shared.resetPanelFrame()
+        }
     }
 }
 
@@ -136,22 +142,22 @@ private extension MenuBarHandler {
         menu.addItem(.separator())
         
         menu.addItem(makeMenuItem(
-            title: "Show Menu Bar Icon",
+            title: "Hide Menu Bar Icon",
             action: #selector(hideBarIcon)
         ))
         
         let dockItem = NSMenuItem(
-            title: "Hide Dock Icon",
+            title: "Dock Icon",
             action: #selector(toggleDockIcon),
             keyEquivalent: ""
         )
         dockItem.target = self
-        dockItem.state = isDockHidden ? .on : .off
+        dockItem.state = isDockHidden ? .off : .on
         menu.addItem(dockItem)
 
         
         let previewItem = NSMenuItem(
-            title: "Show Preview",
+            title: "Preview",
             action: #selector(togglePreview),
             keyEquivalent: ""
         )
@@ -162,6 +168,11 @@ private extension MenuBarHandler {
         menu.addItem(makeMenuItem(
             title: "Set Hotkey",
             action: #selector(openHotkeyPopover)
+        ))
+        
+        menu.addItem(makeMenuItem(
+            title: "Reset Panel Frame",
+            action: #selector(resetPanelFrame)
         ))
         
         menu.addItem(.separator())
@@ -177,7 +188,7 @@ private extension MenuBarHandler {
         
         let screenRecordingItem = NSMenuItem(
             title: "Screen Recording Permission",
-            action: #selector(updateScreenRecordingMenuItem(_:)),
+            action: #selector(checkScreenRecordingPermission(_:)),
             keyEquivalent: ""
         )
         screenRecordingItem.target = self
@@ -214,6 +225,8 @@ private extension MenuBarHandler {
         FloatingPanelHandler.shared.togglePanel()
     }
 }
+
+// MARK: - Memory
 
 private extension MenuBarHandler {
     func currentMemoryMB() -> Double {

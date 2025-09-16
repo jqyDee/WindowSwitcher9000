@@ -111,7 +111,9 @@ struct WindowSwitcherView: View {
                 if vm.displayedWindows.indices.contains(vm.selectedIndex) {
                     let w = vm.displayedWindows[vm.selectedIndex]
                     VStack(alignment: .leading) {
-                        Text("Title: \(w.title.isEmpty ? "(Untitled)" : w.title)")
+                        Text("Title: \(w.title)")
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                         Text("App: \(w.app)")
                         Text("Space: \(w.space)")
                         Text("ID (Yabai): \(w.id)")
