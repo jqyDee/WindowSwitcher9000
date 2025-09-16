@@ -185,28 +185,34 @@ public final class WindowSwitcherViewModel: ObservableObject {
             do {
                 try await yabai.focus(space: window.space, windowId: window.id)
             } catch {
-                launchApp(for: window)
+                AppLauncher.openAppByName(window.app)
             }
         }
     }
 
     public func handleEnter() {
+        FloatingPanelHandler.shared.closePanel()
+        filterText = ""
+        
         if let cmd = CommandHandler.extractCommand(from: filterText) {
             self.footerCommands = CommandHandler.handle(cmd)
             return
         }
+        
         guard displayedWindows.indices.contains(selectedIndex) else { return }
         let window = displayedWindows[selectedIndex]
         if window.pid == 0 || window.id.starts(with: "launch:"){
-            if let app = cachedLaunchableApps.first(where: { $0.name == window.app }) {
-                if let bundleID = app.bundleID {
-                    AppLauncher.openAppByBundleIdentifier(bundleID)
-                    return
-                }
-            }
             AppLauncher.openAppByName(window.app)
         } else {
             yabai.focusFast(space: window.space, windowId: "\(window.id)")
+        }
+    }
+    
+    public func handleEscape() {
+        if !filterText.isEmpty {
+            filterText = ""
+        } else {
+            FloatingPanelHandler.shared.closePanel()
         }
     }
 
@@ -248,14 +254,7 @@ public final class WindowSwitcherViewModel: ObservableObject {
     }
 
     private func launchApp(for window: Window) {
-        if let app = cachedLaunchableApps.first(where: { $0.name == window.app }), let bundleID = app.bundleID {
-            if AppLauncher.openAppByBundleIdentifier(bundleID) {
-                return
-            }
-        }
-        if !AppLauncher.openAppByBundleIdentifier(window.app) {
-            AppLauncher.openAppByName(window.app)
-        }
+        AppLauncher.openAppByName(window.app)
     }
 
     private func recomputeDisplay() {

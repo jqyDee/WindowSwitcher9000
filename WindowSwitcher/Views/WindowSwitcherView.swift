@@ -50,7 +50,7 @@ struct WindowSwitcherView: View {
                 text: $vm.filterText,
                 isFocused: $isFocused,
                 onEnter: { vm.handleEnter() },
-                onEscape: { handleEscape() },
+                onEscape: { vm.handleEscape() },
                 onTab: { vm.moveSelectionForward() },
                 onShiftTab: { vm.moveSelectionBackward() }
             )
@@ -155,13 +155,5 @@ struct WindowSwitcherView: View {
                 bottomTrailingRadius: 10
             )
         )
-    }
-    
-    private func handleEscape() {
-        if !vm.filterText.isEmpty {
-            vm.filterText = ""
-        } else {
-            FloatingPanelHandler.shared.closePanel()
-        }
     }
 }
