@@ -13,6 +13,10 @@ struct WindowSwitcherView: View {
     @StateObject var vm = WindowSwitcherViewModel()
     @FocusState private var isFocused: Bool
 
+    let visibleLines: Int = 6
+    @State private var visibleFrom: Int = 0
+    @State private var visibleTo: Int = 0
+
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
@@ -27,6 +31,9 @@ struct WindowSwitcherView: View {
                     previewPanel
                         .frame(width: 500)
                 }
+            }
+            .onAppear() {
+                visibleTo = visibleLines - 1
             }
             .background(VisualEffectBlur(darkeningOpacity: 0.25))
             .clipShape(
@@ -80,8 +87,26 @@ struct WindowSwitcherView: View {
                 .padding(.horizontal)
             }
             .onChange(of: vm.selectedIndex) { _, newIndex in
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    proxy.scrollTo(newIndex, anchor: .center)
+                let count = vm.displayedWindows.count
+                
+                if newIndex > visibleTo {
+                    // Selection moved past bottom → scroll down
+                    proxy.scrollTo(newIndex, anchor: .bottom)
+                    visibleFrom += 1
+                    visibleTo += 1
+                } else if newIndex < visibleFrom {
+                    // Selection moved past top → scroll up
+                    proxy.scrollTo(newIndex, anchor: .top)
+                    visibleFrom -= 1
+                    visibleTo -= 1
+                }
+                
+                if newIndex == 0 {
+                    visibleFrom = 0
+                    visibleTo = visibleLines - 1
+                } else if newIndex == count - 1 {
+                    visibleFrom = count - visibleLines
+                    visibleTo = count - 1
                 }
             }
         }

@@ -20,7 +20,7 @@ struct WindowRowView: View {
             }
             VStack(alignment: .leading, spacing: 4) {
                 Text(window.title.isEmpty ? "(Untitled)" : window.title).font(.headline)
-                    .lineLimit(2)
+                    .lineLimit(1)
                     .truncationMode(.tail)
                     .fixedSize(horizontal: false, vertical: false)
                 Text(window.app).font(.subheadline).foregroundColor(.secondary)
