@@ -66,3 +66,9 @@ type `/help/` in the filter and press enter. The output of each command will be 
 *This is basically so there is a way to unhide the Menu Bar Item again to change some settings. The command set is really unfinished but should
 get you out of the sticky situation where you disabled the Menu Bar Item and are wondering how to get it back ;).*
 
+# Footer
+*I want to make it clear that this has been my first experience writing in Swift and SwiftUI. This is my first MacOS specific
+application and to be honest ChatGPT helped me a lot to create this in about a week. If you find weird things in this Codebase 
+create a pull request and I am definitely going to have a look*
+
+© Matti Fischbach 2025
