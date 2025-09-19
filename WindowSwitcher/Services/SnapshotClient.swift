@@ -17,8 +17,23 @@ public protocol SnapshotServiceProtocol {
 public final class SnapshotService: SnapshotServiceProtocol {
     private let ciContext = CIContext()
 
+    private final class StreamHolder {
+        let id: UUID
+        let stream: SCStream
+        let delegate: OneShotDelegate
+        var timeoutTask: Task<Void, Never>?
+
+        init(id: UUID, stream: SCStream, delegate: OneShotDelegate) {
+            self.id = id
+            self.stream = stream
+            self.delegate = delegate
+        }
+    }
+    private var activeStreams: [UUID: StreamHolder] = [:]
+
     public init() {}
 
+    @MainActor
     public func snapshot(window: Window) async throws -> NSImage {
         let content: SCShareableContent
         do {
@@ -26,16 +41,10 @@ public final class SnapshotService: SnapshotServiceProtocol {
         } catch {
             throw SnapshotError.permissionDenied
         }
-        
-        
-        
+
         guard let scWindow = content.windows.first(where: {
             guard let owningPID = $0.owningApplication?.processID else { return false }
-            
-            // Check title match
             let titleMatches = window.title.isEmpty || ($0.title ?? "").localizedCaseInsensitiveContains(window.title)
-            
-            // Check windowID match if possible
             let idMatches: Bool
             if let windowId = UInt32(window.id) {
                 idMatches = $0.windowID == windowId
@@ -55,48 +64,72 @@ public final class SnapshotService: SnapshotServiceProtocol {
         let filter = SCContentFilter(desktopIndependentWindow: scWindow)
         let stream = SCStream(filter: filter, configuration: config, delegate: nil)
 
-        // Hold these strong until the task completes!
-        class StreamHolder {
-            var delegate: OneShotDelegate?
-            var stream: SCStream?
-        }
-        let holder = StreamHolder()
+        let holderId = UUID()
 
         return try await withCheckedThrowingContinuation { continuation in
             var didResume = false
 
-            let delegate = OneShotDelegate { sampleBuffer in
-                guard !didResume else { return }
-                didResume = true
+            let sampleQueue = DispatchQueue(label: "com.windowswitcher.scstream.\(holderId)")
 
-                guard
-                    let sample = sampleBuffer,
-                    CMSampleBufferIsValid(sample),
-                    let image = SnapshotService.image(from: sample, using: self.ciContext)
-                else {
+            let delegate = OneShotDelegate { sampleBuffer in
+                Task { @MainActor in
+                    guard !didResume else { return }
+                    didResume = true
+
+                    if
+                        let sample = sampleBuffer,
+                        CMSampleBufferIsValid(sample),
+                        let image = SnapshotService.image(from: sample, using: self.ciContext)
+                    {
+                        if let h = self.activeStreams[holderId] {
+                            h.timeoutTask?.cancel()
+                            Task {
+                                try? await h.stream.stopCapture()
+                                self.activeStreams.removeValue(forKey: holderId)
+                            }
+                        }
+                        continuation.resume(returning: image)
+                        return
+                    }
+
+                    // No usable frame
+                    if let h = self.activeStreams[holderId] {
+                        h.timeoutTask?.cancel()
+                        Task {
+                            try? await h.stream.stopCapture()
+                            self.activeStreams.removeValue(forKey: holderId)
+                        }
+                    }
                     continuation.resume(throwing: SnapshotError.captureFailed(nil))
+                }
+            }
+
+            let holder = StreamHolder(id: holderId, stream: stream, delegate: delegate)
+            self.activeStreams[holderId] = holder
+
+            Task { @MainActor in
+                do {
+                    try stream.addStreamOutput(delegate, type: .screen, sampleHandlerQueue: sampleQueue)
+                    try await stream.startCapture()
+                } catch {
+                    self.activeStreams.removeValue(forKey: holderId)
+                    if !didResume {
+                        didResume = true
+                        continuation.resume(throwing: SnapshotError.captureFailed(error))
+                    }
                     return
                 }
 
-                continuation.resume(returning: image)
-
-                // Stop stream and break strong ref
-                Task {
-                    try? await holder.stream?.stopCapture()
-                    holder.delegate = nil
-                    holder.stream = nil
-                }
-            }
-            holder.delegate = delegate
-            holder.stream = stream
-
-            do {
-                try stream.addStreamOutput(delegate, type: .screen, sampleHandlerQueue: .main)
-                Task { try await stream.startCapture() }
-            } catch {
-                if !didResume {
+                // Timeout after 2s
+                holder.timeoutTask = Task { @MainActor in
+                    do { try await Task.sleep(nanoseconds: 2_000_000_000) } catch { return }
+                    guard !didResume else { return }
                     didResume = true
-                    continuation.resume(throwing: SnapshotError.captureFailed(error))
+                    if let h = self.activeStreams[holderId] {
+                        try? await h.stream.stopCapture()
+                        self.activeStreams.removeValue(forKey: holderId)
+                    }
+                    continuation.resume(throwing: SnapshotError.captureFailed(nil))
                 }
             }
         }
@@ -109,6 +142,7 @@ public final class SnapshotService: SnapshotServiceProtocol {
         return NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
     }
 }
+
 private final class OneShotDelegate: NSObject, SCStreamOutput {
     let handler: (CMSampleBuffer?) -> Void
     init(handler: @escaping (CMSampleBuffer?) -> Void) { self.handler = handler }

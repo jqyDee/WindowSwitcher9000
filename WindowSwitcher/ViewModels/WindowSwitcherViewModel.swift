@@ -105,6 +105,8 @@ public final class WindowSwitcherViewModel: ObservableObject {
         do {
             let newWindows = try await yabai.queryWindows()
             let carried = carryOverCache(from: newWindows)
+            // filter out empty windows and windows which title is 'Window'. I don't really understand
+            // where they are coming from but anyway.
             let filtered = carried.filter { !$0.title.isEmpty }
             windows = filtered.sorted(by: Self.windowSort)
             recomputeDisplay()
