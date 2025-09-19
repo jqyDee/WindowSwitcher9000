@@ -1,0 +1,44 @@
+name: Build WindowSwitcher9000
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Xcode
+        uses: apple-actions/setup-xcode@v2
+        with:
+          xcode-version: latest  # Automatically uses the newest Xcode
+
+      - name: Build the application
+        run: |
+          # Build the Release version of your app
+          xcodebuild \
+            -scheme WindowSwitcher \
+            -configuration Release \
+            -derivedDataPath build \
+            ONLY_ACTIVE_ARCH=NO \
+            BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
+            clean build
+
+      - name: Package build artifact
+        run: |
+          mkdir -p ${{ github.workspace }}/dist
+          cp -R build/Build/Products/Release/WindowSwitcher.app ${{ github.workspace }}/dist/
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: WindowSwitcher9000
+          path: ${{ github.workspace }}/dist/WindowSwitcher.app
