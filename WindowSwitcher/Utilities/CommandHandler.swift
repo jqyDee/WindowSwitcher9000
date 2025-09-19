@@ -51,7 +51,7 @@ public struct CommandHandler {
             MenuBarHandler.shared.hideBarIcon()
             return "Menu Bar Icon hidden"
         case .toggleDock:
-            MenuBarHandler.shared.toggleDockIcon()
+            MenuBarHandler.shared.toggleDockIconProgrammatically()
             return "Toggled Dock Icon \(MenuBarHandler.shared.isDockHidden == false ? "on" : "off")"
         case .quit:
             MenuBarHandler.shared.quit()

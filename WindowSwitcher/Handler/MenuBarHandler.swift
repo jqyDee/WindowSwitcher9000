@@ -22,6 +22,7 @@ class MenuBarHandler {
     
     private var memoryMenuItem: NSMenuItem?
     private var memoryRefresher: AutoRefreshService?
+    private var dockMenuItem: NSMenuItem?
     
     init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -42,14 +43,23 @@ extension MenuBarHandler {
         statusItem.isVisible = false
     }
     
-    @objc func toggleDockIcon() {
+    func toggleDockIconProgrammatically() {
         isDockHidden.toggle()
+        
         if isDockHidden {
-            NSApp.setActivationPolicy(.accessory)  // hide Dock
+            NSApp.setActivationPolicy(.accessory)
         } else {
-            NSApp.setActivationPolicy(.regular)   // show Dock
+            NSApp.setActivationPolicy(.regular)
             NSApp.activate(ignoringOtherApps: true)
         }
+        
+        // Update menu item if it exists
+        dockMenuItem?.state = isDockHidden ? .off : .on
+    }
+
+    @objc func toggleDockIcon(_ sender: NSMenuItem) {
+        toggleDockIconProgrammatically()
+        sender.state = isDockHidden ? .off : .on
     }
 
     @objc func quit() {
@@ -148,13 +158,13 @@ private extension MenuBarHandler {
         
         let dockItem = NSMenuItem(
             title: "Dock Icon",
-            action: #selector(toggleDockIcon),
+            action: #selector(toggleDockIcon(_:)),
             keyEquivalent: ""
         )
         dockItem.target = self
         dockItem.state = isDockHidden ? .off : .on
         menu.addItem(dockItem)
-
+        dockMenuItem = dockItem  // keep reference
         
         let previewItem = NSMenuItem(
             title: "Preview",

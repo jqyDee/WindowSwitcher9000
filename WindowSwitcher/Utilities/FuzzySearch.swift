@@ -44,7 +44,6 @@ public struct FuzzySearch {
 
             // Precompute per-character bonuses in text
             var bonuses = Array(repeating: 0.0, count: n)
-            var lastChar: Character = "/"
             for i in 0..<n {
                 let c = t[i]
                 if c == "/" {
@@ -58,7 +57,6 @@ public struct FuzzySearch {
                 } else {
                     bonuses[i] = 0.0
                 }
-                lastChar = c
             }
 
             // Dynamic programming

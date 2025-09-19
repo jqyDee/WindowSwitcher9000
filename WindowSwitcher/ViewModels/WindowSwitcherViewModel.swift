@@ -193,14 +193,14 @@ public final class WindowSwitcherViewModel: ObservableObject {
     }
 
     public func handleEnter() {
-        FloatingPanelHandler.shared.closePanel()
-        filterText = ""
-        
         if let cmd = CommandHandler.extractCommand(from: filterText) {
             self.footerCommands = CommandHandler.handle(cmd)
             return
         }
         
+        filterText = ""
+        FloatingPanelHandler.shared.closePanel()
+
         guard displayedWindows.indices.contains(selectedIndex) else { return }
         let window = displayedWindows[selectedIndex]
         if window.pid == 0 || window.id.starts(with: "launch:"){
