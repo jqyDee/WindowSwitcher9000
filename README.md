@@ -28,7 +28,7 @@ I would like to add a dynamic filtering that can be set by the user through a GU
 
 # Setup
 The Setup is really simple (If you have [yabai](https://github.com/koekeishiya/yabai) ;)). Only thing that you might have to do, is change the internal programs path to yabai. 
-After changing this to your yabai path, just build the project in XCode (Menu Bar: `Product -> Build`) and open the build folder (Menu Bar: `Product -> Open Build Folder in Finder`).
+After changing this to your yabai path, just build the project in XCode (Menu Bar: `Product -> Build`) and open the build folder (Menu Bar: `Product -> Show Build Folder in Finder`).
 Then just drag the created Application file (`WindowSwitcher.app`) out of the Release folder into your Application folder. Start the application and go to step [Usage](Usage).
 Goodluck!
 
