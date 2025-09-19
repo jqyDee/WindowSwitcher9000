@@ -19,12 +19,7 @@ jobs:
       - name: Set up Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: 'latest'  # Replace with a specific version if needed
-
-      - name: Install dependencies
-        run: |
-          # Assuming you're using Swift Package Manager
-          swift package resolve
+          xcode-version: 'latest'  # Always use the newest Xcode
 
       - name: Build the application
         run: |
