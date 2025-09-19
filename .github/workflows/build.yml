@@ -32,10 +32,15 @@ jobs:
       - name: Package build artifact
         run: |
           mkdir -p ${{ github.workspace }}/dist
-          cp -R build/Build/Products/Release/WindowSwitcher.app ${{ github.workspace }}/dist/
+          cp -R "build/Build/Products/Release/WindowSwitcher.app" "${{ github.workspace }}/dist/WindowSwitcher.app"
+
+      - name: Zip the app
+        run: |
+          cd dist
+          zip -r WindowSwitcher9000.zip WindowSwitcher.app
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: WindowSwitcher9000
-          path: ${{ github.workspace }}/dist/WindowSwitcher.app
+          path: ${{ github.workspace }}/dist/WindowSwitcher9000.zip
