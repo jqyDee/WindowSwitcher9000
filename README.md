@@ -35,7 +35,7 @@ Just drag the prebuilt executable from the Latest Release to your Application Fo
 ## Built yourself
 Clone the Project and open it with XCode.
 Build the project in XCode (Menu Bar: `Product -> Build`) and open the build folder (Menu Bar: `Product -> Show Build Folder in Finder`).
-Then just drag the created Application file (`WindowSwitcher.app`) out of the Release folder into your Application folder. Start the application and go to step [Usage](Usage).
+Then just drag the created Application file (`WindowSwitcher.app`) out of the Release folder into your Application folder. Start the application and go to Usage.
 Goodluck!
 
 # Usage
