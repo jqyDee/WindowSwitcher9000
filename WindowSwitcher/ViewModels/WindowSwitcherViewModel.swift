@@ -199,6 +199,7 @@ public final class WindowSwitcherViewModel: ObservableObject {
         }
         
         filterText = ""
+        footerCommands = ""
         FloatingPanelHandler.shared.closePanel()
 
         guard displayedWindows.indices.contains(selectedIndex) else { return }
