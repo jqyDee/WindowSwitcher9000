@@ -24,8 +24,41 @@ public protocol YabaiServiceProtocol {
 public actor YabaiClient: YabaiServiceProtocol {
     public let yabaiPath: URL
     
-    public init(yabaiPath: String = "/opt/homebrew/bin/yabai") {
-        self.yabaiPath = URL(fileURLWithPath: yabaiPath)
+    public init(yabaiPath: String? = nil) {
+        if let provided = yabaiPath {
+            self.yabaiPath = URL(fileURLWithPath: provided)
+        } else if let resolved = YabaiClient.resolveYabaiPath() {
+            self.yabaiPath = resolved
+        } else {
+            // fallback for Homebrew on Apple Silicon
+            self.yabaiPath = URL(fileURLWithPath: "/opt/homebrew/bin/yabai")
+        }
+    }
+    
+    private static func resolveYabaiPath() -> URL? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/which")
+        process.arguments = ["yabai"]
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = Pipe()
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+
+            guard process.terminationStatus == 0 else { return nil }
+
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            guard let path = String(data: data, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+                  !path.isEmpty else { return nil }
+
+            return URL(fileURLWithPath: path)
+        } catch {
+            return nil
+        }
     }
     
     private func run(arguments: [String]) throws -> Data {
