@@ -13,7 +13,7 @@ final class FloatingPanel<Content: View>: NSPanel {
         
         super.init(
             contentRect: contentRect,
-            styleMask: [.titled, .closable, .fullSizeContentView],
+            styleMask: [.titled, .closable, .fullSizeContentView, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
@@ -55,7 +55,7 @@ final class FloatingPanel<Content: View>: NSPanel {
     // MARK: - Overrides
     
     /// Allow focus inside (for text fields, etc.)
-    override var canBecomeKey: Bool { true }
+    override var canBecomeKey: Bool { false }
     
     /// Panels typically shouldn't become main
     override var canBecomeMain: Bool { false }

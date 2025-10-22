@@ -115,7 +115,8 @@ extension FloatingPanelHandler {
     private func showImmediately(_ panel: NSPanel) {
         panel.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
         NSApp.activate(ignoringOtherApps: true)
-        panel.makeKeyAndOrderFront(nil)
+        // panel.makeKeyAndOrderFront(nil)
+        panel.orderFrontRegardless()
         
         Task { await vm?.initializeOnOpen() }
         
