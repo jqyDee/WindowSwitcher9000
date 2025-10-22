@@ -29,7 +29,7 @@ struct WindowRowView: View {
         }
         .padding(8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 8).fill(isSelected ? Color.white.opacity(0.15) : .clear))
+        .background(RoundedRectangle(cornerRadius: 8).fill(isSelected ? Color.primary.opacity(0.15) : .clear))
         .buttonStyle(.plain)
     }
 }

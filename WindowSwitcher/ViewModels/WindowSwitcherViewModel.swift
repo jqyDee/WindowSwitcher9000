@@ -28,7 +28,7 @@ public final class WindowSwitcherViewModel: ObservableObject {
     @Published public var cachedLaunchableApps: [LaunchableApp] = []
     
     // MARK: - Dependencies
-    private let yabai: YabaiServiceProtocol
+    private let yabai: WindowServiceProtocol
     private let snapshotService: SnapshotServiceProtocol
 
     // MARK: - Internals
@@ -37,7 +37,7 @@ public final class WindowSwitcherViewModel: ObservableObject {
 
     // MARK: - Initialization
     public init(
-        yabai: YabaiServiceProtocol = YabaiClient(),
+        yabai: WindowServiceProtocol = YabaiClient(),
         snapshotService: SnapshotServiceProtocol = SnapshotService()
     ) {
         self.yabai = yabai

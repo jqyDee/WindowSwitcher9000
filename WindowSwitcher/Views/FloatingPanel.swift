@@ -55,7 +55,7 @@ final class FloatingPanel<Content: View>: NSPanel {
     // MARK: - Overrides
     
     /// Allow focus inside (for text fields, etc.)
-    override var canBecomeKey: Bool { false }
+    override var canBecomeKey: Bool { true }
     
     /// Panels typically shouldn't become main
     override var canBecomeMain: Bool { false }

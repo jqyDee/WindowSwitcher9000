@@ -15,13 +15,7 @@ public enum YabaiError: Error {
     case decoding(Error)
 }
 
-public protocol YabaiServiceProtocol {
-    func queryWindows() async throws -> [Window]
-    func focus(space: Int, windowId: String) async throws
-    func focusFast(space: Int, windowId: String)
-}
-
-public actor YabaiClient: YabaiServiceProtocol {
+public actor YabaiClient: WindowServiceProtocol {
     public let yabaiPath: URL
     
     public init(yabaiPath: String? = nil) {

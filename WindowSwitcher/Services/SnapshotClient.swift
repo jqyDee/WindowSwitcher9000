@@ -9,10 +9,6 @@ import ScreenCaptureKit
 import CoreImage
 import Cocoa
 
-public protocol SnapshotServiceProtocol {
-    @MainActor
-    func snapshot(window: Window) async throws -> NSImage
-}
 
 public final class SnapshotService: SnapshotServiceProtocol {
     private let ciContext = CIContext()
