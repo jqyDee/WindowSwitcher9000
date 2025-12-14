@@ -33,6 +33,7 @@ public final class WindowSwitcherViewModel: ObservableObject {
 
     // MARK: - Internals
     private var autoRefreshService: AutoRefreshService?
+    private var autoReloadService: AutoRefreshService?
     private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Initialization
@@ -116,13 +117,19 @@ public final class WindowSwitcherViewModel: ObservableObject {
         }
     }
 
-    public func startAutoRefresh(interval: TimeInterval = 1.0) {
+    public func startAutoRefresh(intervalRefresh: TimeInterval = 1.0, intervalReload: TimeInterval = 10.0) {
         autoRefreshService?.stop()
-        autoRefreshService = AutoRefreshService(interval: interval) { [weak self] in
+        autoReloadService?.stop()
+        autoRefreshService = AutoRefreshService(interval: intervalRefresh) { [weak self] in
             guard let self = self else { return }
             await self.refreshWindows()
         }
+        autoReloadService = AutoRefreshService(interval: intervalReload) { [weak self] in
+            guard let self = self else { return }
+            await self.loadLaunchableApps()
+        }
         autoRefreshService?.start()
+        autoReloadService?.start()
     }
 
     public func stopAutoRefresh() {
