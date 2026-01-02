@@ -226,12 +226,16 @@ public final class WindowSwitcherViewModel: ObservableObject {
         let window = displayedWindows[selectedIndex]
         
         var history = selectionHistory
-        let key = window.app // Use app name or a unique ID
+        let key = window.historyKey // Use app name or a unique ID
         history[key, default: 0] += 1
         selectionHistory = history
         
         if window.pid == 0 || window.id.starts(with: "launch:"){
-            AppLauncher.openAppByName(window.app)
+            if let bid = window.bundleID {
+                AppLauncher.openByBundleID(bid)
+            } else {
+                AppLauncher.openAppByName(window.app)
+            }
         } else {
             yabai.focusFast(space: window.space, windowId: "\(window.id)")
         }
@@ -301,8 +305,8 @@ public final class WindowSwitcherViewModel: ObservableObject {
             var score = FuzzySearch.score(text: text, pattern: filter) ?? -Double.infinity
 
             // Bias for real windows
-            let frequency = Double(history[windowWithCache.app] ?? 0)
-            score += 0.5 + (frequency * 0.1)
+            let frequency = Double(history[windowWithCache.historyKey] ?? 0) * 0.2
+            score += 0.5 + frequency
 
             return (windowWithCache, score)
         }
@@ -312,9 +316,6 @@ public final class WindowSwitcherViewModel: ObservableObject {
             let launchables = cachedLaunchableApps.compactMap { app -> (Window, Double)? in
                 let title = "Open \(app.name)"
                 guard let scoreRaw = FuzzySearch.score(text: title, pattern: filter) else { return nil }
-                
-                let frequency = Double(history[app.name] ?? 0)
-                let score = scoreRaw - 0.5 + (frequency * 0.1)
                 
                 let isRunning = app.bundleID.flatMap {
                     NSRunningApplication.runningApplications(withBundleIdentifier: $0).first
@@ -328,8 +329,13 @@ public final class WindowSwitcherViewModel: ObservableObject {
                     pid: isRunning
                         ? (NSRunningApplication.runningApplications(withBundleIdentifier: app.bundleID ?? "").first?.processIdentifier ?? 0)
                         : 0,
-                    icon: app.icon
+                    icon: app.icon,
+                    bundleID: app.bundleID
                 )
+                
+                let frequency = Double(history[win.historyKey] ?? 0) * 0.2
+                let score = scoreRaw - 0.5 + frequency
+                
                 return (win, score)
             }
             scored.append(contentsOf: launchables)

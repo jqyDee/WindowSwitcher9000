@@ -10,6 +10,7 @@ import AppKit
 import Darwin
 import MachO
 import Foundation
+import UserNotifications
 
 // MARK: - Menu Bar Handler
 
@@ -56,12 +57,12 @@ extension MenuBarHandler {
         // Update menu item if it exists
         dockMenuItem?.state = isDockHidden ? .off : .on
     }
-
+    
     @objc func toggleDockIcon(_ sender: NSMenuItem) {
         toggleDockIconProgrammatically()
         sender.state = isDockHidden ? .off : .on
     }
-
+    
     @objc func quit() {
         print("MenuBarHandler : Quitting")
         NSApp.terminate(nil)
@@ -77,13 +78,20 @@ extension MenuBarHandler {
     }
     
     @objc func checkAccessibilityPermission() -> Bool {
-        return AXIsProcessTrusted()
+        let granted = AXIsProcessTrusted()
+        
+        let msg = "Accessibility permission: \(granted)"
+        NotificationService.shared.dispatch(title: "Accessibility Permission", message: msg)
+
+        return granted
     }
     
-    @objc func checkScreenRecordingPermission(_ sender: NSMenuItem) {
+    @objc func checkScreenRecordingPermission() -> Bool {
         let granted = CGPreflightScreenCaptureAccess()
-        sender.state = granted ? .on : .off
-        print("Screen Recording permission: \(granted)")
+        let msg = "Screen Recording Permission: \(granted)"
+        NotificationService.shared.dispatch(title: "Screen Recording Permissions", message: msg)
+        
+        return granted
     }
     
     @objc func openHotkeyPopover() {
@@ -102,12 +110,22 @@ extension MenuBarHandler {
         UserDefaults.standard.set(newState, forKey: "PreviewEnabled")
         sender.state = newState ? .on : .off
         print("MenuBarHandler : Preview is now \(newState ? "enabled" : "disabled")")
+        
+        NotificationService.shared.dispatch(title: "Preview", message: "Preview is now \(newState ? "enabled" : "disabled")")
     }
     
     @objc func resetPanelFrame() {
         Task { @MainActor in
             FloatingPanelHandler.shared.resetPanelFrame()
         }
+        NotificationService.shared.dispatch(title: "Panel Location", message: "Panel location has been reset")
+    }
+    
+    @objc func clearHistory() {
+        UserDefaults.standard.removeObject(forKey: "SelectionHistory")
+        print("MenuBarHandler : Selection history cleared")
+        
+        NotificationService.shared.dispatch(title: "History Cleared", message: "Search preferences have been reset.")
     }
 }
 
@@ -180,9 +198,16 @@ private extension MenuBarHandler {
             action: #selector(openHotkeyPopover)
         ))
         
+        menu.addItem(.separator())
+        
         menu.addItem(makeMenuItem(
             title: "Reset Panel Frame",
             action: #selector(resetPanelFrame)
+        ))
+        
+        menu.addItem(makeMenuItem(
+            title: "Clear Selection History",
+            action: #selector(clearHistory)
         ))
         
         menu.addItem(.separator())
@@ -198,11 +223,11 @@ private extension MenuBarHandler {
         
         let screenRecordingItem = NSMenuItem(
             title: "Screen Recording Permission",
-            action: #selector(checkScreenRecordingPermission(_:)),
+            action: #selector(checkScreenRecordingPermission),
             keyEquivalent: ""
         )
         screenRecordingItem.target = self
-        screenRecordingItem.state = CGPreflightScreenCaptureAccess() ? .on : .off
+        screenRecordingItem.state = checkScreenRecordingPermission() ? .on : .off
         menu.addItem(screenRecordingItem)
         
         menu.addItem(.separator())
