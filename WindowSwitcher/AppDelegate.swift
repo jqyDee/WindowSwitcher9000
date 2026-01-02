@@ -6,9 +6,10 @@
 //
 
 import AppKit
+import UserNotifications
 
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     var menuBarController: MenuBarHandler?
     private var appearanceObserver: NSKeyValueObservation?
 
@@ -21,6 +22,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func applicationDidFinishLaunching(_ notification: Notification) {
+        UNUserNotificationCenter.current().delegate = self
+        
         updateAppIcon()
 
         // Observe changes to effectiveAppearance
@@ -34,6 +37,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         ]
         let granted = AXIsProcessTrustedWithOptions(options)
         print("Accessibility permission granted: \(granted)")
+        
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
+            if granted {
+                print("Notification permission granted.")
+            } else if let error = error {
+                print("Notification permission error: \(error.localizedDescription)")
+            }
+        }
         
         _ = MenuBarHandler.shared
         _ = FloatingPanelHandler.shared
@@ -52,4 +63,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .sound])
+    }
 }

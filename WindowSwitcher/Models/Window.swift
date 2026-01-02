@@ -13,24 +13,37 @@ public struct Window: Identifiable, Codable {
     public let title: String
     public let space: Int
     public let pid: pid_t
+    public let bundleID: String?
 
     // runtime-only (not in hash/equality)
     public var icon: NSImage?
     public var cachedSnapshot: Snapshot?
-
+    
+    public var historyKey: String {
+        if id.starts(with: "launch:") {
+            // For launchers, use the unique launch ID (which contains the bundleID)
+            return id
+        } else {
+            // For real windows, combine app and title to distinguish between windows
+            // Using a separator like "|" helps avoid collisions
+            return "\(app)|\(title)"
+        }
+    }
+    
     enum CodingKeys: String, CodingKey {
-        case id, app, title, space, pid
+        case id, app, title, space, pid, bundleID
     }
 
-    public init(id: String, app: String, title: String, space: Int, pid: pid_t, icon: NSImage? = nil) {
+    public init(id: String, app: String, title: String, space: Int, pid: pid_t, icon: NSImage? = nil, bundleID: String? = nil) {
         self.id = id
         self.app = app
         self.title = title
         self.space = space
         self.pid = pid
         self.icon = icon
+        self.bundleID = bundleID
     }
-
+    
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         if let intId = try? container.decode(Int.self, forKey: .id) {
@@ -42,6 +55,7 @@ public struct Window: Identifiable, Codable {
         title = try container.decode(String.self, forKey: .title)
         space = try container.decode(Int.self, forKey: .space)
         pid = try container.decode(Int32.self, forKey: .pid)
+        bundleID = try container.decodeIfPresent(String.self, forKey: .bundleID)
         icon = nil
     }
 }

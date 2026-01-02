@@ -14,6 +14,8 @@ import SwiftUI
 public final class WindowSwitcherViewModel: ObservableObject {
     // MARK: - Published Properties (Inputs & Outputs)
     @AppStorage("PreviewEnabled") public var isPreviewEnabled: Bool = true
+    @AppStorage("SelectionHistory") private var selectionHistoryData: Data = Data()
+    
     @Published public var filterText: String = ""
     @Published public var windows: [Window] = []
     @Published public var displayedWindows: [Window] = []
@@ -44,6 +46,17 @@ public final class WindowSwitcherViewModel: ObservableObject {
         self.yabai = yabai
         self.snapshotService = snapshotService
         setupBindings()
+    }
+    
+    private var selectionHistory: [String: Int] {
+        get {
+            (try? JSONDecoder().decode([String: Int].self, from: selectionHistoryData)) ?? [:]
+        }
+        set {
+            if let data = try? JSONEncoder().encode(newValue) {
+                selectionHistoryData = data
+            }
+        }
     }
 
     private func setupBindings() {
@@ -211,8 +224,18 @@ public final class WindowSwitcherViewModel: ObservableObject {
 
         guard displayedWindows.indices.contains(selectedIndex) else { return }
         let window = displayedWindows[selectedIndex]
+        
+        var history = selectionHistory
+        let key = window.historyKey // Use app name or a unique ID
+        history[key, default: 0] += 1
+        selectionHistory = history
+        
         if window.pid == 0 || window.id.starts(with: "launch:"){
-            AppLauncher.openAppByName(window.app)
+            if let bid = window.bundleID {
+                AppLauncher.openByBundleID(bid)
+            } else {
+                AppLauncher.openAppByName(window.app)
+            }
         } else {
             yabai.focusFast(space: window.space, windowId: "\(window.id)")
         }
@@ -269,6 +292,7 @@ public final class WindowSwitcherViewModel: ObservableObject {
 
     private func recomputeDisplay() {
         let filter = filterText.trimmed
+        let history = selectionHistory
 
         // 1. Real windows
         var scored: [(Window, Double)] = windows.map { w in
@@ -281,7 +305,8 @@ public final class WindowSwitcherViewModel: ObservableObject {
             var score = FuzzySearch.score(text: text, pattern: filter) ?? -Double.infinity
 
             // Bias for real windows
-            score += 0.5
+            let frequency = Double(history[windowWithCache.historyKey] ?? 0) * 0.2
+            score += 0.5 + frequency
 
             return (windowWithCache, score)
         }
@@ -291,10 +316,7 @@ public final class WindowSwitcherViewModel: ObservableObject {
             let launchables = cachedLaunchableApps.compactMap { app -> (Window, Double)? in
                 let title = "Open \(app.name)"
                 guard let scoreRaw = FuzzySearch.score(text: title, pattern: filter) else { return nil }
-
-                // Slight penalty for launchables
-                let score = scoreRaw - 0.5
-
+                
                 let isRunning = app.bundleID.flatMap {
                     NSRunningApplication.runningApplications(withBundleIdentifier: $0).first
                 } != nil
@@ -307,8 +329,13 @@ public final class WindowSwitcherViewModel: ObservableObject {
                     pid: isRunning
                         ? (NSRunningApplication.runningApplications(withBundleIdentifier: app.bundleID ?? "").first?.processIdentifier ?? 0)
                         : 0,
-                    icon: app.icon
+                    icon: app.icon,
+                    bundleID: app.bundleID
                 )
+                
+                let frequency = Double(history[win.historyKey] ?? 0) * 0.2
+                let score = scoreRaw - 0.5 + frequency
+                
                 return (win, score)
             }
             scored.append(contentsOf: launchables)
