@@ -135,18 +135,26 @@ struct WindowSwitcherView: View {
 
                 if vm.displayedWindows.indices.contains(vm.selectedIndex) {
                     let w = vm.displayedWindows[vm.selectedIndex]
-                    VStack(alignment: .leading) {
-                        Text("Title: \(w.title)")
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                        Text("App: \(w.app)")
-                        Text("Space: \(w.space)")
-                        Text("ID (Yabai): \(w.id)")
-                        Text("PID: \(w.pid)")
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading) {
+                            Text("Title: \(w.title)")
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                            Text("App: \(w.app)")
+                            Text("Space: \(w.space)")
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading) // Expands to fill 50%
+                        
+                        VStack(alignment: .leading) {
+                            Text("ID (Yabai): \(w.id)")
+                            Text("PID: \(w.pid)")
+                            Text("Bundle ID: \(w.bundleID ?? "nil")")
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading) // Expands to fill the other 50%
                     }
                     .font(.caption)
                     .foregroundColor(.secondary)
-                    .padding([.vertical, .trailing], 4)
+                    .padding([.trailing], 4)
                 }
             }
             .padding()
