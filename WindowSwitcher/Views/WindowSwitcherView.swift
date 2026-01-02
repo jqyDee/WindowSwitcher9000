@@ -148,13 +148,13 @@ struct WindowSwitcherView: View {
                         VStack(alignment: .leading) {
                             Text("ID (Yabai): \(w.id)")
                             Text("PID: \(w.pid)")
-                            Text("Bundle ID: \(w.bundleID ?? "nil")")
+                            Text("Bundle ID: \(w.bundleID ?? "0")")
                         }
                         .frame(maxWidth: .infinity, alignment: .leading) // Expands to fill the other 50%
                     }
                     .font(.caption)
                     .foregroundColor(.secondary)
-                    .padding([.trailing], 4)
+                    .padding([.vertical, .trailing], 4)
                 }
             }
             .padding()
