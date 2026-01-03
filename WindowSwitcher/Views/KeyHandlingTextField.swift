@@ -16,9 +16,10 @@ struct KeyHandlingTextField: NSViewRepresentable {
     var onEscape: (() -> Void)?
     var onTab: (() -> Void)?
     var onShiftTab: (() -> Void)?
+    var onSettings: (() -> Void)?
     
     func makeNSView(context: Context) -> NSTextField {
-        let field = NSTextField()
+        let field = FocusTextField()
         field.placeholderString = "Find the Program in your mess ..."
         field.delegate = context.coordinator
         field.isBezeled = false
@@ -32,6 +33,11 @@ struct KeyHandlingTextField: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSTextField, context: Context) {
         nsView.stringValue = text
+        
+        if let focusField = nsView as? FocusTextField {
+            focusField.onSettings = onSettings
+        }
+        
         if isFocused.wrappedValue && nsView.window?.firstResponder != nsView.currentEditor() {
             nsView.window?.makeFirstResponder(nsView)
         }

@@ -13,7 +13,7 @@ class NotificationService {
 
     // A generic function that takes any title and body
     func dispatch(title: String, message: String, identifier: String = UUID().uuidString) {
-        guard UserDefaults.standard.bool(forKey: "IsDebugMode") else { return }
+        guard UserDefaults.standard.bool(forKey: "EnableNotifications") else { return }
         
         let content = UNMutableNotificationContent()
         content.title = title

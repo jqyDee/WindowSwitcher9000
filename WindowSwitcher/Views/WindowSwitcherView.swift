@@ -87,7 +87,11 @@ struct WindowSwitcherView: View {
                 onEnter: { vm.handleEnter() },
                 onEscape: { vm.handleEscape() },
                 onTab: { vm.moveSelectionForward() },
-                onShiftTab: { vm.moveSelectionBackward() }
+                onShiftTab: { vm.moveSelectionBackward() },
+                onSettings: {
+                    FloatingPanelHandler.shared.closePanel()
+                    MenuBarHandler.shared.openSettings()
+                }
             )
             .frame(height: 30)
             .font(.title)

@@ -16,6 +16,7 @@ public final class WindowSwitcherViewModel: ObservableObject {
     @AppStorage("PreviewEnabled") public var isPreviewEnabled: Bool = true
     @AppStorage("SelectionHistory") private var selectionHistoryData: Data = Data()
     @AppStorage("IsDebugMode") public var isDebugMode: Bool = false
+    @AppStorage("EnableNotifications") public var enableNotifications: Bool = false
     
     @AppStorage("PanelWidth") public var panelWidth: Double = 900.0
     @AppStorage("PanelHeight") public var panelHeight: Double = 400.0

@@ -75,6 +75,7 @@ struct SettingsView: View {
 
 struct GeneralSettingsView: View {
     @AppStorage("DockHidden") private var isDockHidden = true
+    @AppStorage("EnableNotifications") private var enableNotifications = false
     
     var body: some View {
         Form {
@@ -88,6 +89,7 @@ struct GeneralSettingsView: View {
                     .onChange(of: isDockHidden) { _, newValue in
                         MenuBarHandler.shared.toggleDockIconProgrammatically()
                     }
+                Toggle("Enable Notifications", isOn: $enableNotifications)
             }
         }
         .formStyle(.grouped)
