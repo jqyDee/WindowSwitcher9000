@@ -135,7 +135,7 @@ public final class WindowSwitcherViewModel: ObservableObject {
         }
     }
 
-    public func startAutoRefresh(intervalRefresh: TimeInterval = 1.0, intervalReload: TimeInterval = 10.0) {
+    public func startAutoRefresh(intervalRefresh: TimeInterval = 1.0, intervalReload: TimeInterval = 60.0) {
         autoRefreshService?.stop()
         autoReloadService?.stop()
         autoRefreshService = AutoRefreshService(interval: intervalRefresh) { [weak self] in

@@ -143,7 +143,7 @@ struct WindowSwitcherView: View {
                         .clipShape(RoundedRectangle(
                             cornerRadius: 3
                         ))
-                        .shadow(color: Color.black.opacity(0.5), radius: 15, x: 0, y: 8)
+                        .shadow(color: Color.black.opacity(0.35), radius: 15, x: 0, y: 8)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     Text("No preview")
