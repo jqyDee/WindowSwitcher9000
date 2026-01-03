@@ -5,6 +5,7 @@
 //  Created by Matti Fischbach on 02.09.25.
 //
 
+
 import SwiftUI
 import AppKit
 import KeyboardShortcuts
