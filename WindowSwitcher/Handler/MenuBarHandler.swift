@@ -26,6 +26,8 @@ class MenuBarHandler {
     private var dockMenuItem: NSMenuItem?
     private var debugMenuItem: NSMenuItem?
     
+    private var settingsWindow: NSWindow?
+    
     init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         setupMenuBar()
@@ -96,13 +98,55 @@ extension MenuBarHandler {
     }
     
     @objc func openSettings() {
-        let popover = NSPopover()
-        popover.contentSize = NSSize(width: 300, height: 100)
-        popover.behavior = .transient
-        popover.contentViewController = NSHostingController(rootView: SettingsView())
+        if let window = settingsWindow {
+            window.collectionBehavior = [.moveToActiveSpace, .managed]
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let rootView = SettingsView()
+        let hostingController = NSHostingController(rootView: rootView)
         
-        if let button = statusItem.button {
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        let window = NSWindow(contentViewController: hostingController)
+        window.styleMask = [.titled, .closable, .miniaturizable]
+        window.title = "WindowSwitcher Settings"
+        window.isReleasedWhenClosed = false
+        
+        // 1. Force the window to establish its size first
+        // This matches the .frame() you set in SettingsView
+        let windowWidth: CGFloat = 700
+        let windowHeight: CGFloat = 450
+        window.setContentSize(NSSize(width: windowWidth, height: windowHeight))
+        
+        // 2. Modern Look
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        
+        // 3. Collection Behavior
+        window.collectionBehavior = [.moveToActiveSpace, .managed]
+        
+        // 4. Calculate Center correctly based on the target screen
+        // We use the screen containing the mouse/menu bar for best UX
+        let screen = NSScreen.main ?? NSScreen.screens[0]
+        let screenFrame = screen.visibleFrame
+        
+        // Use the explicit constants here to ensure the math is 100% accurate
+        let x = screenFrame.origin.x + (screenFrame.width - windowWidth) / 2
+        let y = screenFrame.origin.y + (screenFrame.height - windowHeight) / 2
+        
+        window.setFrameOrigin(NSPoint(x: x, y: y))
+
+        self.settingsWindow = window
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: window,
+            queue: .main
+        ) { [weak self] _ in
+            self?.settingsWindow = nil
         }
     }
     
@@ -131,6 +175,11 @@ extension MenuBarHandler {
         print("MenuBarHandler : Debug Mode is now \(newState ? "enabled" : "disabled")")
         NotificationService.shared.dispatch(title: "Debug Mode", message: "Debug Mode is now \(newState ? "enabled" : "disabled")")
     }
+    
+    @objc func openAbout() {
+        openSettings()
+        NotificationCenter.default.post(name: NSNotification.Name("SelectAboutCategory"), object: nil)
+    }
 }
 
 // MARK: - Setup
@@ -155,17 +204,15 @@ private extension MenuBarHandler {
         let menu = NSMenu()
         
         menu.addItem(makeMenuItem(
+            title: "About WindowSwitcher",
+            action: #selector(openAbout)
+        ))
+
+        menu.addItem(makeMenuItem(
             title: "Toggle Switcher",
             action: #selector(toggleSwitcher)
         ))
         
-        // This now opens the popover containing all the settings we just moved
-        menu.addItem(makeMenuItem(
-            title: "Settings...",
-            action: #selector(openSettings),
-            key: ","
-        ))
-
         menu.addItem(.separator())
         
         let memItem = NSMenuItem(title: "Memory Usage: -- MB", action: nil, keyEquivalent: "")
@@ -174,6 +221,13 @@ private extension MenuBarHandler {
         
         menu.addItem(.separator())
         
+        // This now opens the popover containing all the settings we just moved
+        menu.addItem(makeMenuItem(
+            title: "Settings...",
+            action: #selector(openSettings),
+            key: ","
+        ))
+
         menu.addItem(makeMenuItem(
             title: "Quit",
             action: #selector(quit),

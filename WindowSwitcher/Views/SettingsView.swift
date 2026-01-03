@@ -8,12 +8,72 @@
 import SwiftUI
 import KeyboardShortcuts
 
+enum SettingsCategory: String, CaseIterable, Identifiable {
+    case about = "About"
+    case general = "General"
+    case appearance = "Appearance"
+    case privacy = "Privacy"
+    case advanced = "Advanced"
+    
+    var id: String { self.rawValue }
+    
+    var icon: String {
+        switch self {
+        case .about: return "info.circle"
+        case .general: return "gearshape"
+        case .appearance: return "paintpalette"
+        case .privacy: return "hand.raised"
+        case .advanced: return "hammer"
+        }
+    }
+}
+
 struct SettingsView: View {
-    @AppStorage("PanelWidth") private var panelWidth = 900.0
-    @AppStorage("PanelHeight") private var panelHeight = 400.0
-    @AppStorage("PreviewWidthPercentage") private var previewRatio = 0.55
-    @AppStorage("PreviewEnabled") private var previewEnabled = true
-    @AppStorage("IsDebugMode") private var isDebugMode = false
+    @State private var selectedCategory: SettingsCategory? = .general
+    
+    var body: some View {
+        NavigationSplitView {
+            // Using the view builder version of List to allow for Dividers
+            List(selection: $selectedCategory) {
+                // 1. Static entry for About
+                NavigationLink(value: SettingsCategory.about) {
+                    Label(SettingsCategory.about.rawValue, systemImage: SettingsCategory.about.icon)
+                }
+                
+                // 2. The Separator
+                Divider()
+                
+                // 3. Dynamic entries for the rest
+                ForEach(SettingsCategory.allCases.filter { $0 != .about }) { category in
+                    NavigationLink(value: category) {
+                        Label(category.rawValue, systemImage: category.icon)
+                    }
+                }
+            }
+            .navigationSplitViewColumnWidth(min: 160, ideal: 160, max: 160)
+        } detail: {
+            Group {
+                switch selectedCategory {
+                case .about: AboutView()
+                case .general: GeneralSettingsView()
+                case .appearance: AppearanceSettingsView()
+                case .privacy: PrivacySettingsView()
+                case .advanced: AdvancedSettingsView()
+                case .none: Text("Select a category")
+                }
+            }
+            .navigationTitle(selectedCategory?.rawValue ?? "")
+        }
+        .frame(width: 700, height: 450)
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SelectAboutCategory"))) { _ in
+            selectedCategory = .about
+        }
+    }
+}
+
+// MARK: - Subviews
+
+struct GeneralSettingsView: View {
     @AppStorage("DockHidden") private var isDockHidden = true
     
     var body: some View {
@@ -23,100 +83,173 @@ struct SettingsView: View {
                     KeyboardShortcuts.Recorder(for: .openHotkeyWindow)
                 }
             }
-            
-            Section("Appearance") {
-                LabeledContent("Panel Width") {
+            Section("System") {
+                Toggle("Hide Dock Icon", isOn: $isDockHidden)
+                    .onChange(of: isDockHidden) { _, newValue in
+                        MenuBarHandler.shared.toggleDockIconProgrammatically()
+                    }
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+struct AppearanceSettingsView: View {
+    @AppStorage("PanelWidth") private var panelWidth = 900.0
+    @AppStorage("PanelHeight") private var panelHeight = 400.0
+    @AppStorage("PreviewWidthPercentage") private var previewRatio = 0.55
+    @AppStorage("PreviewEnabled") private var previewEnabled = true
+    
+    var body: some View {
+        Form {
+            Section("Dimensions") {
+                LabeledContent("Width") {
                     HStack {
                         Slider(value: $panelWidth, in: 600...1200, step: 10)
-                        Text("\(Int(panelWidth))px")
+                        
+                        Text("\(Int(panelWidth)) px")
                             .monospacedDigit()
                             .frame(width: 60, alignment: .trailing)
                     }
                 }
-                
-                LabeledContent("Panel Height") {
+
+                LabeledContent("Height") {
                     HStack {
                         Slider(value: $panelHeight, in: 300...600, step: 10)
-                        Text("\(Int(panelHeight))px")
-                            .monospacedDigit()
-                            .frame(width: 60, alignment: .trailing)
+                        
+                        Text("\(Int(panelHeight)) px")
+                            .monospacedDigit() .frame(width: 60, alignment: .trailing)
                     }
                 }
+            }
+            
+            Section("Preview") {
+                Toggle("Enable Preview", isOn: $previewEnabled)
                 
-                LabeledContent("Preview Ratio") {
+                LabeledContent("Ratio") {
                     HStack {
                         Slider(value: $previewRatio, in: 0.3...0.71, step: 0.02)
+                        
                         Text("\(Int(previewRatio * 100))%")
                             .monospacedDigit()
                             .frame(width: 60, alignment: .trailing)
                     }
                 }
+                .disabled(!previewEnabled)
             }
-            
-            Section("Privacy & Permissions") {
-                LabeledContent("Accessibility") {
-                    let isGranted = MenuBarHandler.shared.checkAccessibilityPermission()
-                    Button(action: { MenuBarHandler.shared.requestAccessibilityPermission(NSMenuItem()) }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: isGranted ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .foregroundColor(isGranted ? .green : .red)
-                            Text(isGranted ? "Granted" : "Request...")
-                        }
-                    }
-                }
-                
-                LabeledContent("Screen Recording") {
-                    let isGranted = MenuBarHandler.shared.checkScreenRecordingPermission()
-                    Button(action: { _ = MenuBarHandler.shared.checkScreenRecordingPermission() }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: isGranted ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .foregroundColor(isGranted ? .green : .red)
-                            Text(isGranted ? "Granted" : "Check Status")
-                        }
-                    }
-                }
-            }
-            
-            Section("Maintenance") {
-                // Placing maintenance buttons in LabeledContent keeps them aligned with sliders/toggles
-                LabeledContent("Window State") {
-                    Button("Reset Panel Location") {
-                        MenuBarHandler.shared.resetPanelFrame()
-                    }
-                }
-                
-                LabeledContent("Data") {
-                    Button("Clear Search History", role: .destructive) {
-                        MenuBarHandler.shared.clearHistory()
-                    }
-                }
-            }
-            
-            Section("Features") {
-                Toggle("Enable Preview", isOn: $previewEnabled)
-                Toggle("Debug Mode", isOn: $isDebugMode)
-                Toggle("Hide Dock Icon", isOn: $isDockHidden)
-                    .onChange(of: isDockHidden) { _, newValue in
-                        if newValue != MenuBarHandler.shared.isDockHidden {
-                            MenuBarHandler.shared.toggleDockIconProgrammatically()
-                        }
-                    }
-            }
-            
-            // Native Footer look: no divider, just spacing or a centered button
-            HStack {
-                Button("Reset to Defaults") {
-                    panelWidth = 900.0
-                    panelHeight = 400.0
-                    previewRatio = 0.58
-                    MenuBarHandler.shared.resetPanelFrame()
-                }
-                .buttonStyle(.bordered)
-            }
-            .padding(.top, 10)
         }
-        .padding()
-        .frame(width: 500)
+        .formStyle(.grouped)
+    }
+}
+
+struct PrivacySettingsView: View {
+    var body: some View {
+        Form {
+            Section("Permissions") {
+                LabeledContent("Accessibility") {
+                    PermissionButton(
+                        isGranted: MenuBarHandler.shared.checkAccessibilityPermission(),
+                        action: { MenuBarHandler.shared.requestAccessibilityPermission(NSMenuItem()) }
+                    )
+                }
+                LabeledContent("Screen Recording") {
+                    PermissionButton(
+                        isGranted: MenuBarHandler.shared.checkScreenRecordingPermission(),
+                        action: { _ = MenuBarHandler.shared.checkScreenRecordingPermission() }
+                    )
+                }
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+struct AdvancedSettingsView: View {
+    @AppStorage("IsDebugMode") private var isDebugMode = false
+    
+    var body: some View {
+        Form {
+            Section("Maintenance") {
+                LabeledContent("Panel Location") {
+                    Button("Reset") { MenuBarHandler.shared.resetPanelFrame() }
+                }
+                LabeledContent("Search History") {
+                    Button("Clear", role: .destructive) { MenuBarHandler.shared.clearHistory() }
+                }
+            }
+            Section("Testing") {
+                Toggle("Debug Mode", isOn: $isDebugMode)
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+struct PermissionButton: View {
+    let isGranted: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Image(systemName: isGranted ? "checkmark.circle.fill" : "xmark.circle.fill")
+                    .foregroundColor(isGranted ? .green : .red)
+                Text(isGranted ? "Granted" : "Check Status")
+            }
+        }
+    }
+}
+
+struct AboutView: View {
+    // Get version and build from Info.plist
+    private var version: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+    }
+    
+    private var build: String {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+    }
+
+    var body: some View {
+        VStack(spacing: 20) {
+            // App Icon
+            if let appIcon = NSApp.applicationIconImage {
+                Image(nsImage: appIcon)
+                    .resizable()
+                    .frame(width: 80, height: 80)
+            }
+
+            VStack(spacing: 4) {
+                Text("WindowSwitcher")
+                    .font(.title)
+                    .bold()
+                
+                Text("Version \(version) (Build \(build))")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+
+            Text("A fast, keyboard-centric window switcher for macOS, powered by Yabai.")
+                .font(.body)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+
+            Divider().frame(width: 200)
+
+            VStack(spacing: 8) {
+                Link(destination: URL(string: "https://github.com/jqyDee/WindowSwitcher9000")!) {
+                    Label("View on GitHub", systemImage: "link")
+                }
+                
+                Text("© 2026 Matti Fischbach")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+        }
+        .padding(.top, 40)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
