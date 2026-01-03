@@ -26,13 +26,8 @@ jobs:
       - name: Extract version
         id: get_version
         run: |
-          if [[ $GITHUB_REF == refs/tags/v* ]]; then
-            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
-            echo "IS_TAG=true" >> $GITHUB_ENV
-          else
-            echo "VERSION=1.0.0" >> $GITHUB_ENV
-            echo "IS_TAG=false" >> $GITHUB_ENV
-          fi
+          # Since the trigger is restricted to tags, GITHUB_REF will always be a tag
+          echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
 
       - name: Build the application
         run: |
