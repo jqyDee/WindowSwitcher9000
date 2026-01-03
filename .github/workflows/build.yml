@@ -5,7 +5,7 @@ on:
     branches:
       - main
     tags:
-      - 'v*.*.*'
+      - 'v*.*.*'  # Trigger on version tags
   pull_request:
     branches:
       - main
@@ -16,7 +16,9 @@ permissions:
 jobs:
   build:
     runs-on: macos-latest
-
+    # This ensures the entire job only runs if it's a tag push or a pull request/main push
+    # To strictly limit the RELEASE part, we use conditional steps below.
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -26,19 +28,17 @@ jobs:
         with:
           xcode-version: 'latest'
 
-      # 1. Determine the version number from the tag or fallback to a default
       - name: Extract version
         id: get_version
         run: |
           if [[ $GITHUB_REF == refs/tags/v* ]]; then
-            # If tag is v1.2.3, this sets VERSION to 1.2.3
             echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+            echo "IS_TAG=true" >> $GITHUB_ENV
           else
-            # Fallback for manual builds or main branch pushes
             echo "VERSION=1.0.0" >> $GITHUB_ENV
+            echo "IS_TAG=false" >> $GITHUB_ENV
           fi
 
-      # 2. Build the application with overridden version and build numbers
       - name: Build the application
         run: |
           xcodebuild \
@@ -59,14 +59,16 @@ jobs:
           cd dist
           zip -r WindowSwitcher9000.zip WindowSwitcher.app
 
+      # Upload artifact for every build (helpful for debugging PRs)
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: WindowSwitcher9000-${{ env.VERSION }}-b${{ github.run_number }}
           path: dist/WindowSwitcher9000.zip
 
+      # THE CHANGE: This step and subsequent release steps only run if a tag is present
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: env.IS_TAG == 'true'
         uses: softprops/action-gh-release@v1
         with:
           name: WindowSwitcher v${{ env.VERSION }}
