@@ -201,15 +201,16 @@ struct PermissionButton: View {
 }
 
 struct AboutView: View {
-    // Get version and build from Info.plist
+    // Fetches the 'Marketing Version' (e.g., 1.0.0)
     private var version: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
     }
     
+    // Fetches the 'Build' number (e.g., 42)
     private var build: String {
-        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0"
     }
-
+    
     var body: some View {
         VStack(spacing: 20) {
             // App Icon
