@@ -2,13 +2,8 @@ name: Build and Release WindowSwitcher9000
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*.*.*'  # Trigger on version tags
-  pull_request:
-    branches:
-      - main
 
 permissions:
   contents: write
