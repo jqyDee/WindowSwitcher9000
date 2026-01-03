@@ -58,7 +58,6 @@ jobs:
 
       # THE CHANGE: This step and subsequent release steps only run if a tag is present
       - name: Create GitHub Release
-        if: env.IS_TAG == 'true'
         uses: softprops/action-gh-release@v1
         with:
           name: v${{ env.VERSION }}
