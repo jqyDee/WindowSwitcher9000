@@ -17,6 +17,8 @@ struct WindowSwitcherView: View {
     private var panelWidth: CGFloat { CGFloat(vm.panelWidth) }
     private var panelHeight: CGFloat { CGFloat(vm.panelHeight) }
     private var previewRatio: CGFloat { CGFloat(vm.previewWidthPercentage) }
+    private let headerHeight: CGFloat = 78
+    private let rowHeight: CGFloat = WindowRowView.height
     
     private var previewWidth: CGFloat {
         panelWidth * previewRatio
@@ -26,7 +28,11 @@ struct WindowSwitcherView: View {
         vm.isPreviewEnabled ? (panelWidth - previewWidth) : panelWidth
     }
     
-    let visibleLines: Int = 6
+    // Calculate visible lines based on the panel height
+    private var visibleLines: Int {
+        let availableHeight = CGFloat(vm.panelHeight) - headerHeight
+        return Int(floor(availableHeight / rowHeight))
+    }
     @State private var visibleFrom: Int = 0
     @State private var visibleTo: Int = 0
 
@@ -48,6 +54,9 @@ struct WindowSwitcherView: View {
             .onAppear() {
                 visibleTo = visibleLines - 1
             }
+            .onChange(of: vm.panelHeight) {
+                visibleTo = visibleFrom + visibleLines - 1
+            }
             .background(VisualEffectBlur(darkeningOpacity: 0.25))
             .clipShape(
                 UnevenRoundedRectangle(
@@ -65,7 +74,7 @@ struct WindowSwitcherView: View {
                         bottomTrailingRadius: 10
                     )
                 )
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: panelWidth)
         }
     }
 

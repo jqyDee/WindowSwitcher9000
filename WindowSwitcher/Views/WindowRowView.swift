@@ -10,6 +10,8 @@
 import SwiftUI
 
 struct WindowRowView: View {
+    static let height: CGFloat = 48
+    
     let window: Window
     let isSelected: Bool
 

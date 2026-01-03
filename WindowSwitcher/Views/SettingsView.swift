@@ -27,9 +27,7 @@ struct SettingsView: View {
             Section("Appearance") {
                 LabeledContent("Panel Width") {
                     HStack {
-                        Slider(value: $panelWidth, in: 600...1200, step: 10, onEditingChanged: { isEditing in
-                            if !isEditing { MenuBarHandler.shared.resetPanelFrame() }
-                        })
+                        Slider(value: $panelWidth, in: 600...1200, step: 10)
                         Text("\(Int(panelWidth))px")
                             .monospacedDigit()
                             .frame(width: 60, alignment: .trailing)
@@ -38,9 +36,7 @@ struct SettingsView: View {
                 
                 LabeledContent("Panel Height") {
                     HStack {
-                        Slider(value: $panelHeight, in: 300...600, step: 10, onEditingChanged: { isEditing in
-                            if !isEditing { MenuBarHandler.shared.resetPanelFrame() }
-                        })
+                        Slider(value: $panelHeight, in: 300...600, step: 10)
                         Text("\(Int(panelHeight))px")
                             .monospacedDigit()
                             .frame(width: 60, alignment: .trailing)
@@ -49,9 +45,7 @@ struct SettingsView: View {
                 
                 LabeledContent("Preview Ratio") {
                     HStack {
-                        Slider(value: $previewRatio, in: 0.3...0.71, step: 0.02, onEditingChanged: { isEditing in
-                            if !isEditing { MenuBarHandler.shared.resetPanelFrame() }
-                        })
+                        Slider(value: $previewRatio, in: 0.3...0.71, step: 0.02)
                         Text("\(Int(previewRatio * 100))%")
                             .monospacedDigit()
                             .frame(width: 60, alignment: .trailing)
