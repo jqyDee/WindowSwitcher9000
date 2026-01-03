@@ -21,6 +21,7 @@ public enum Command: String {
     case toggleDock = "TOGGLE_DOCK"
     case quit = "QUIT"
     case help = "HELP"
+    case debug = "DEBUG"
     case unknown
 
     public static func from(_ raw: String) -> Command {
@@ -56,8 +57,11 @@ public struct CommandHandler {
         case .quit:
             MenuBarHandler.shared.quit()
             return "Quitting"
+        case .debug:
+            MenuBarHandler.shared.toggleDebugMode()
+            return "toggled Debug"
         case .help:
-            return "/commands/: show_icon, hide_icon, toggle_dock, quit, help"
+            return "/commands/: show_icon, hide_icon, toggle_dock, quit, help, debug"
         case .unknown:
             return nil
         }

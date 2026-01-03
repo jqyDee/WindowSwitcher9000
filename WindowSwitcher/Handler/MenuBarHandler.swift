@@ -24,6 +24,7 @@ class MenuBarHandler {
     private var memoryMenuItem: NSMenuItem?
     private var memoryRefresher: AutoRefreshService?
     private var dockMenuItem: NSMenuItem?
+    private var debugMenuItem: NSMenuItem?
     
     init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -94,7 +95,7 @@ extension MenuBarHandler {
         return granted
     }
     
-    @objc func openHotkeyPopover() {
+    @objc func openSettings() {
         let popover = NSPopover()
         popover.contentSize = NSSize(width: 300, height: 100)
         popover.behavior = .transient
@@ -103,15 +104,6 @@ extension MenuBarHandler {
         if let button = statusItem.button {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         }
-    }
-    
-    @objc func togglePreview(_ sender: NSMenuItem) {
-        let newState = !(UserDefaults.standard.bool(forKey: "PreviewEnabled"))
-        UserDefaults.standard.set(newState, forKey: "PreviewEnabled")
-        sender.state = newState ? .on : .off
-        print("MenuBarHandler : Preview is now \(newState ? "enabled" : "disabled")")
-        
-        NotificationService.shared.dispatch(title: "Preview", message: "Preview is now \(newState ? "enabled" : "disabled")")
     }
     
     @objc func resetPanelFrame() {
@@ -126,6 +118,18 @@ extension MenuBarHandler {
         print("MenuBarHandler : Selection history cleared")
         
         NotificationService.shared.dispatch(title: "History Cleared", message: "Search preferences have been reset.")
+    }
+    
+    func toggleDebugMode() {
+        let current = UserDefaults.standard.bool(forKey: "IsDebugMode")
+        let newState = !current
+        UserDefaults.standard.set(newState, forKey: "IsDebugMode")
+        
+        // Update the checkmark state
+        debugMenuItem?.state = newState ? .on : .off
+        
+        print("MenuBarHandler : Debug Mode is now \(newState ? "enabled" : "disabled")")
+        NotificationService.shared.dispatch(title: "Debug Mode", message: "Debug Mode is now \(newState ? "enabled" : "disabled")")
     }
 }
 
@@ -152,86 +156,24 @@ private extension MenuBarHandler {
         
         menu.addItem(makeMenuItem(
             title: "Toggle Switcher",
-            action: #selector(toggleSwitcher),
-            key: "o"
+            action: #selector(toggleSwitcher)
         ))
         
+        // This now opens the popover containing all the settings we just moved
+        menu.addItem(makeMenuItem(
+            title: "Settings...",
+            action: #selector(openSettings),
+            key: ","
+        ))
+
         menu.addItem(.separator())
         
-        // Memory usage item
-        let memItem = NSMenuItem(
-            title: "Memory Usage: -- MB",
-            action: nil,
-            keyEquivalent: ""
-        )
+        let memItem = NSMenuItem(title: "Memory Usage: -- MB", action: nil, keyEquivalent: "")
         memoryMenuItem = memItem
         menu.addItem(memItem)
         
         menu.addItem(.separator())
         
-        menu.addItem(makeMenuItem(
-            title: "Hide Menu Bar Icon",
-            action: #selector(hideBarIcon)
-        ))
-        
-        let dockItem = NSMenuItem(
-            title: "Dock Icon",
-            action: #selector(toggleDockIcon(_:)),
-            keyEquivalent: ""
-        )
-        dockItem.target = self
-        dockItem.state = isDockHidden ? .off : .on
-        menu.addItem(dockItem)
-        dockMenuItem = dockItem  // keep reference
-        
-        let previewItem = NSMenuItem(
-            title: "Preview",
-            action: #selector(togglePreview),
-            keyEquivalent: ""
-        )
-        previewItem.target = self
-        previewItem.state = UserDefaults.standard.bool(forKey: "PreviewEnabled") ? .on : .off
-        menu.addItem(previewItem)
-        
-        menu.addItem(makeMenuItem(
-            title: "Set Hotkey",
-            action: #selector(openHotkeyPopover)
-        ))
-        
-        menu.addItem(.separator())
-        
-        menu.addItem(makeMenuItem(
-            title: "Reset Panel Frame",
-            action: #selector(resetPanelFrame)
-        ))
-        
-        menu.addItem(makeMenuItem(
-            title: "Clear Selection History",
-            action: #selector(clearHistory)
-        ))
-        
-        menu.addItem(.separator())
-
-        let accessibilityItem = NSMenuItem(
-            title: "Accessibility Permission",
-            action: #selector(requestAccessibilityPermission),
-            keyEquivalent: ""
-        )
-        accessibilityItem.target = self
-        accessibilityItem.state = checkAccessibilityPermission() ? .on : .off
-        menu.addItem(accessibilityItem)
-        
-        let screenRecordingItem = NSMenuItem(
-            title: "Screen Recording Permission",
-            action: #selector(checkScreenRecordingPermission),
-            keyEquivalent: ""
-        )
-        screenRecordingItem.target = self
-        screenRecordingItem.state = checkScreenRecordingPermission() ? .on : .off
-        menu.addItem(screenRecordingItem)
-        
-        menu.addItem(.separator())
-
         menu.addItem(makeMenuItem(
             title: "Quit",
             action: #selector(quit),

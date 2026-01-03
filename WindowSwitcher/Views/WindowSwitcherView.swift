@@ -12,7 +12,20 @@ import AppKit
 struct WindowSwitcherView: View {
     @StateObject var vm = WindowSwitcherViewModel()
     @FocusState private var isFocused: Bool
-
+    
+    // MARK: - Dimensions
+    private var panelWidth: CGFloat { CGFloat(vm.panelWidth) }
+    private var panelHeight: CGFloat { CGFloat(vm.panelHeight) }
+    private var previewRatio: CGFloat { CGFloat(vm.previewWidthPercentage) }
+    
+    private var previewWidth: CGFloat {
+        panelWidth * previewRatio
+    }
+    
+    private var listWidth: CGFloat {
+        vm.isPreviewEnabled ? (panelWidth - previewWidth) : panelWidth
+    }
+    
     let visibleLines: Int = 6
     @State private var visibleFrom: Int = 0
     @State private var visibleTo: Int = 0
@@ -24,12 +37,12 @@ struct WindowSwitcherView: View {
                     header
                     windowList
                 }
-                .frame(width: vm.isPreviewEnabled ? 400 : 900)
+                .frame(width: listWidth)
 
                 if vm.isPreviewEnabled {
                     Divider()
                     previewPanel
-                        .frame(width: 500)
+                        .frame(width: previewWidth)
                 }
             }
             .onAppear() {
@@ -43,7 +56,7 @@ struct WindowSwitcherView: View {
                 )
             )
             .foregroundStyle(.primary)
-            .frame(width: 900, height: 400)
+            .frame(width: panelWidth, height: panelHeight)
 
             footer
                 .frame(maxWidth: .infinity)
@@ -133,7 +146,7 @@ struct WindowSwitcherView: View {
                     }
                 }
 
-                if vm.displayedWindows.indices.contains(vm.selectedIndex) {
+                if vm.isDebugMode && vm.displayedWindows.indices.contains(vm.selectedIndex) {
                     let w = vm.displayedWindows[vm.selectedIndex]
                     HStack(alignment: .top) {
                         VStack(alignment: .leading) {
@@ -142,6 +155,7 @@ struct WindowSwitcherView: View {
                                 .truncationMode(.tail)
                             Text("App: \(w.app)")
                             Text("Space: \(w.space)")
+                            Text("Image created at: \(w.cachedSnapshot?.createdAt.formatted(date: .omitted, time: .standard) ?? "0")")
                         }
                         .frame(maxWidth: .infinity, alignment: .leading) // Expands to fill 50%
                         

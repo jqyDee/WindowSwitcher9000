@@ -15,6 +15,11 @@ public final class WindowSwitcherViewModel: ObservableObject {
     // MARK: - Published Properties (Inputs & Outputs)
     @AppStorage("PreviewEnabled") public var isPreviewEnabled: Bool = true
     @AppStorage("SelectionHistory") private var selectionHistoryData: Data = Data()
+    @AppStorage("IsDebugMode") public var isDebugMode: Bool = false
+    
+    @AppStorage("PanelWidth") public var panelWidth: Double = 900.0
+    @AppStorage("PanelHeight") public var panelHeight: Double = 400.0
+    @AppStorage("PreviewWidthPercentage") public var previewWidthPercentage: Double = 0.55
     
     @Published public var filterText: String = ""
     @Published public var windows: [Window] = []
