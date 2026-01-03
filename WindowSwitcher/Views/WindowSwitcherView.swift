@@ -59,6 +59,12 @@ struct WindowSwitcherView: View {
             .frame(width: panelWidth, height: panelHeight)
 
             footer
+                .clipShape(
+                    UnevenRoundedRectangle(
+                        bottomLeadingRadius: 10,
+                        bottomTrailingRadius: 10
+                    )
+                )
                 .frame(maxWidth: .infinity)
         }
     }
@@ -131,7 +137,14 @@ struct WindowSwitcherView: View {
 
             VStack(alignment: .leading, spacing: 0) {
                 if let img = vm.previewImage {
-                    Image(nsImage: img).resizable().scaledToFit().frame(maxWidth: .infinity, maxHeight: .infinity)
+                    Image(nsImage: img)
+                        .resizable()
+                        .scaledToFit()
+                        .clipShape(RoundedRectangle(
+                            cornerRadius: 3
+                        ))
+                        .shadow(color: Color.black.opacity(0.5), radius: 15, x: 0, y: 8)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     Text("No preview")
                         .foregroundColor(.secondary)
@@ -168,6 +181,7 @@ struct WindowSwitcherView: View {
                     }
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .padding(.top, 6)
                     .padding([.vertical, .trailing], 4)
                 }
             }
@@ -196,11 +210,5 @@ struct WindowSwitcherView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(VisualEffectBlur(darkeningOpacity: 0.4))
-        .clipShape(
-            UnevenRoundedRectangle(
-                bottomLeadingRadius: 10,
-                bottomTrailingRadius: 10
-            )
-        )
     }
 }
