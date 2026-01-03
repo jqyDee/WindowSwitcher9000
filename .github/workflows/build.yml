@@ -61,7 +61,7 @@ jobs:
         if: env.IS_TAG == 'true'
         uses: softprops/action-gh-release@v1
         with:
-          name: WindowSwitcher v${{ env.VERSION }}
+          name: v${{ env.VERSION }}
           tag_name: ${{ github.ref_name }}
           files: dist/WindowSwitcher9000.zip
           generate_release_notes: true
