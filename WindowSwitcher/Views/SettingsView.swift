@@ -190,7 +190,7 @@ struct AdvancedSettingsView: View {
                 }
                 LabeledContent("Real Window Bias") {
                     HStack {
-                        Slider(value: $realWindowBias, in: 0...1, step: 0.05)
+                        Slider(value: $realWindowBias, in: 0...1, step: 0.02)
                         
                         Text(String(format: "%.2f", Double(realWindowBias)))
                             .monospacedDigit() .frame(width: 60, alignment: .trailing)
