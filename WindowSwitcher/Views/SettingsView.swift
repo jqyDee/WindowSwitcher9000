@@ -170,7 +170,14 @@ struct AdvancedSettingsView: View {
     @AppStorage("IsDebugMode") private var isDebugMode = false
     @AppStorage("HistoryBias") private var historyBias = 0.1
     @AppStorage("RealWindowBias") public var realWindowBias: Double = 0.2
-
+    @AppStorage("SelectionHistory") private var selectionHistoryData: Data = Data()
+    
+    // Change 'count' to 'value' in the signature
+    private var sortedHistory: [(key: String, value: Int)] {
+        let decoded = (try? JSONDecoder().decode([String: Int].self, from: selectionHistoryData)) ?? [:]
+        return decoded.sorted { $0.value > $1.value }
+    }
+    
     var body: some View {
         Form {
             Section("Maintenance") {
@@ -199,6 +206,24 @@ struct AdvancedSettingsView: View {
             }
             Section("Testing") {
                 Toggle("Debug Mode", isOn: $isDebugMode)
+            }
+            Section("Top Selections") {
+                if sortedHistory.isEmpty {
+                    Text("No history recorded yet.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                } else {
+                    ForEach(sortedHistory.prefix(10), id: \.key) { item in
+                        HStack {
+                            Text(item.key)
+                                .lineLimit(1)
+                            Spacer()
+                            Text("\(item.value)")
+                                .foregroundColor(.secondary)
+                                .monospacedDigit()
+                        }
+                    }
+                }
             }
         }
         .formStyle(.grouped)
