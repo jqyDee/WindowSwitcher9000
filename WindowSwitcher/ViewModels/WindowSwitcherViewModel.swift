@@ -17,6 +17,7 @@ public final class WindowSwitcherViewModel: ObservableObject {
     @AppStorage("SelectionHistory") private var selectionHistoryData: Data = Data()
     @AppStorage("IsDebugMode") public var isDebugMode: Bool = false
     @AppStorage("EnableNotifications") public var enableNotifications: Bool = false
+    @AppStorage("HistoryBias") public var historyBias: Double = 0.1
     
     @AppStorage("PanelWidth") public var panelWidth: Double = 900.0
     @AppStorage("PanelHeight") public var panelHeight: Double = 400.0
@@ -311,8 +312,10 @@ public final class WindowSwitcherViewModel: ObservableObject {
             var score = FuzzySearch.score(text: text, pattern: filter) ?? -Double.infinity
 
             // Bias for real windows
-            let frequency = Double(history[windowWithCache.historyKey] ?? 0) * 0.2
-            score += 0.5 + frequency
+            let count = Double(history[windowWithCache.historyKey] ?? 0)
+            let frequencyBonus = log1p(count) * historyBias
+            
+            score += 0.5 + frequencyBonus
 
             return (windowWithCache, score)
         }
@@ -339,8 +342,10 @@ public final class WindowSwitcherViewModel: ObservableObject {
                     bundleID: app.bundleID
                 )
                 
-                let frequency = Double(history[win.historyKey] ?? 0) * 0.2
-                let score = scoreRaw - 0.5 + frequency
+                let count = Double(history[win.historyKey] ?? 0)
+                let frequencyBonus = log1p(count) * historyBias
+                
+                let score = scoreRaw - 0.5 + frequencyBonus
                 
                 return (win, score)
             }
