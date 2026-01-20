@@ -18,7 +18,8 @@ public final class WindowSwitcherViewModel: ObservableObject {
     @AppStorage("IsDebugMode") public var isDebugMode: Bool = false
     @AppStorage("EnableNotifications") public var enableNotifications: Bool = false
     @AppStorage("HistoryBias") public var historyBias: Double = 0.1
-    
+    @AppStorage("RealWindowBias") public var realWindowBias: Double = 0.2
+
     @AppStorage("PanelWidth") public var panelWidth: Double = 900.0
     @AppStorage("PanelHeight") public var panelHeight: Double = 400.0
     @AppStorage("PreviewWidthPercentage") public var previewWidthPercentage: Double = 0.55
@@ -315,7 +316,7 @@ public final class WindowSwitcherViewModel: ObservableObject {
             let count = Double(history[windowWithCache.historyKey] ?? 0)
             let frequencyBonus = log1p(count) * historyBias
             
-            score += 0.5 + frequencyBonus
+            score += realWindowBias + frequencyBonus
 
             return (windowWithCache, score)
         }
@@ -345,7 +346,7 @@ public final class WindowSwitcherViewModel: ObservableObject {
                 let count = Double(history[win.historyKey] ?? 0)
                 let frequencyBonus = log1p(count) * historyBias
                 
-                let score = scoreRaw - 0.5 + frequencyBonus
+                let score = scoreRaw - realWindowBias + frequencyBonus
                 
                 return (win, score)
             }

@@ -169,7 +169,8 @@ struct PrivacySettingsView: View {
 struct AdvancedSettingsView: View {
     @AppStorage("IsDebugMode") private var isDebugMode = false
     @AppStorage("HistoryBias") private var historyBias = 0.1
-    
+    @AppStorage("RealWindowBias") public var realWindowBias: Double = 0.2
+
     var body: some View {
         Form {
             Section("Maintenance") {
@@ -179,11 +180,19 @@ struct AdvancedSettingsView: View {
                 LabeledContent("Search History") {
                     Button("Clear", role: .destructive) { MenuBarHandler.shared.clearHistory() }
                 }
-                LabeledContent("Search History") {
+                LabeledContent("History Bias") {
                     HStack {
                         Slider(value: $historyBias, in: 0...0.5, step: 0.01)
                         
                         Text(String(format: "%.2f", Double(historyBias)))
+                            .monospacedDigit() .frame(width: 60, alignment: .trailing)
+                    }
+                }
+                LabeledContent("Real Window Bias") {
+                    HStack {
+                        Slider(value: $realWindowBias, in: 0...1, step: 0.05)
+                        
+                        Text(String(format: "%.2f", Double(realWindowBias)))
                             .monospacedDigit() .frame(width: 60, alignment: .trailing)
                     }
                 }
