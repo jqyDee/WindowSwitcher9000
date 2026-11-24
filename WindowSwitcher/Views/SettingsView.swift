@@ -76,7 +76,8 @@ struct SettingsView: View {
 struct GeneralSettingsView: View {
     @AppStorage("DockHidden") private var isDockHidden = true
     @AppStorage("EnableNotifications") private var enableNotifications = false
-    
+    @AppStorage("WindowService") private var windowServiceKey: String = "yabai"
+
     var body: some View {
         Form {
             Section("Keyboard") {
@@ -90,6 +91,14 @@ struct GeneralSettingsView: View {
                         MenuBarHandler.shared.toggleDockIconProgrammatically()
                     }
                 Toggle("Enable Notifications", isOn: $enableNotifications)
+                LabeledContent("Window Service") {
+                    Picker("", selection: $windowServiceKey) {
+                        Text("Yabai").tag("yabai")
+                        Text("Native").tag("native")
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 160)
+                }
             }
         }
         .formStyle(.grouped)

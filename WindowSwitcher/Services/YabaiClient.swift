@@ -33,6 +33,10 @@ public actor YabaiClient: WindowServiceProtocol {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/which")
         process.arguments = ["yabai"]
+        // GUI apps get a stripped PATH from launchd; inject Homebrew paths so `which` can find yabai
+        var env = ProcessInfo.processInfo.environment
+        env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+        process.environment = env
 
         let pipe = Pipe()
         process.standardOutput = pipe

@@ -38,7 +38,10 @@ public final class WindowSwitcherViewModel: ObservableObject {
     @Published public var cachedLaunchableApps: [LaunchableApp] = []
     
     // MARK: - Dependencies
-    private let yabai: WindowServiceProtocol
+    @AppStorage("WindowService") private var windowServiceKey: String = "yabai"
+    private lazy var yabaiClient: WindowServiceProtocol = YabaiClient()
+    private lazy var nativeClient: WindowServiceProtocol = NativeClient()
+    private var activeService: WindowServiceProtocol { windowServiceKey == "native" ? nativeClient : yabaiClient }
     private let snapshotService: SnapshotServiceProtocol
 
     // MARK: - Internals
@@ -47,11 +50,7 @@ public final class WindowSwitcherViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Initialization
-    public init(
-        yabai: WindowServiceProtocol = YabaiClient(),
-        snapshotService: SnapshotServiceProtocol = SnapshotService()
-    ) {
-        self.yabai = yabai
+    public init(snapshotService: SnapshotServiceProtocol = SnapshotService()) {
         self.snapshotService = snapshotService
         setupBindings()
     }
@@ -125,7 +124,7 @@ public final class WindowSwitcherViewModel: ObservableObject {
 
     public func refreshWindows() async {
         do {
-            let newWindows = try await yabai.queryWindows()
+            let newWindows = try await activeService.queryWindows()
             let carried = carryOverCache(from: newWindows)
             // filter out empty windows and windows which title is 'Window'. I don't really understand
             // where they are coming from but anyway.
@@ -213,7 +212,7 @@ public final class WindowSwitcherViewModel: ObservableObject {
     public func focusWindow(_ window: Window) {
         Task {
             do {
-                try await yabai.focus(space: window.space, windowId: window.id)
+                try await activeService.focus(space: window.space, windowId: window.id)
             } catch {
                 AppLauncher.openAppByName(window.app)
             }
@@ -245,7 +244,7 @@ public final class WindowSwitcherViewModel: ObservableObject {
                 AppLauncher.openAppByName(window.app)
             }
         } else {
-            yabai.focusFast(space: window.space, windowId: "\(window.id)")
+            activeService.focusFast(space: window.space, windowId: "\(window.id)")
         }
     }
     
