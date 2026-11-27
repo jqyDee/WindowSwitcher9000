@@ -31,17 +31,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             self.updateAppIcon()
         }
 
-        // This will ask if not already granted
-        let options: NSDictionary = [
-            kAXTrustedCheckOptionPrompt.takeUnretainedValue() as NSString: true
-        ]
-        let granted = AXIsProcessTrustedWithOptions(options)
-        print("Accessibility permission granted: \(granted)")
-
-        // Screen Recording is needed for window titles (native service) and previews.
-        // Requesting it registers the app in System Settings (and prompts the first time only).
-        if !CGPreflightScreenCaptureAccess() {
-            _ = CGRequestScreenCaptureAccess()
+        // The setup window asks for permissions (first launch, or whenever Accessibility is missing)
+        if OnboardingHandler.shared.shouldShowOnLaunch {
+            OnboardingHandler.shared.show()
         }
         
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
