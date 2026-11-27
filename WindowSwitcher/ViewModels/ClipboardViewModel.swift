@@ -63,6 +63,9 @@ public final class ClipboardViewModel: ObservableObject {
     private var lastRecorded: (id: ClipItem.ID, at: Date)?
     private static let wipeWindow: TimeInterval = 3 * 60
     private var deactivationObserver: NSObjectProtocol?
+    /// The clipboard's change count right after `copy` wrote to it: that change is this app's own,
+    /// so it moves the entry to the top without replacing its source app.
+    private var ownChangeCount: Int?
     private var thumbnails: [ClipItem.ID: NSImage] = [:]
 
     private init() {
@@ -107,8 +110,9 @@ public final class ClipboardViewModel: ObservableObject {
         guard Date.now.timeIntervalSince(passwordManagerLastFrontmost) > Self.passwordManagerGrace else { return }
         guard let content = Self.readContent(from: pasteboard) else { return }
 
-        // when the panel copies an entry back, this app is frontmost: keep the entry's original source
-        let source = frontmost?.processIdentifier == ProcessInfo.processInfo.processIdentifier ? nil : frontmost?.localizedName
+        // an entry copied back from the history keeps its original source
+        // (the panel doesn't activate this app, so the frontmost app is the one it was opened over)
+        let source = pasteboard.changeCount == ownChangeCount ? nil : frontmost?.localizedName
         let item = store.record(content, sourceApp: source, limit: historyLimit)
         lastRecorded = (item.id, .now)
         items = store.items
@@ -174,6 +178,7 @@ public final class ClipboardViewModel: ObservableObject {
             pasteboard.setPropertyList(urls.map(\.path), forType: filenames)
             pasteboard.setString(urls.map(\.lastPathComponent).joined(separator: "\n"), forType: .string)
         }
+        if pasteboard == .general { ownChangeCount = pasteboard.changeCount }
         return nil
     }
 

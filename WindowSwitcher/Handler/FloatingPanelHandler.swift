@@ -28,10 +28,7 @@ final class FloatingPanelHandler {
     private var panel: FloatingPanel<WindowSwitcherView>?
     private var vm: WindowSwitcherViewModel?
     
-    // Observers
-    private var didBecomeActiveObserver: Any?
-    private var didResignActiveObserver: Any?
-    private var isScheduledToShow = false
+    private var didResignKeyObserver: Any?
     
     private init() {
         // KeyboardShortcuts 3.x requires main-actor registration; the action is also delivered on the main actor.
@@ -78,71 +75,21 @@ extension FloatingPanelHandler {
         showPanel(panel!)
     }
     
+    /// Shows the panel without activating this app: the panel is non-activating, so it takes the
+    /// keyboard while the app you came from stays frontmost. Closing it hands focus straight back,
+    /// and ⌘V after copying from the clipboard history lands in that app.
     private func showPanel(_ panel: NSPanel) {
         guard !panel.isVisible else { return }
-        
-        if NSApp.isActive {
-            showImmediately(panel)
-        } else {
-            scheduleShowAfterActivation(panel)
-        }
-    }
-    
-    private func scheduleShowAfterActivation(_ panel: NSPanel) {
-        guard !isScheduledToShow else { return }
-        isScheduledToShow = true
-        
-        NSApp.activate(ignoringOtherApps: true)
-        
-        didBecomeActiveObserver = NotificationCenter.default.addObserver(
-            forName: NSApplication.didBecomeActiveNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            guard let self = self else { return }
-            self.clearDidBecomeActiveObserver()
-            self.showImmediately(panel)
-        }
-        
-        // Fallback in case notification is delayed
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
-            guard let self = self else { return }
-            if self.isScheduledToShow {
-                self.clearDidBecomeActiveObserver()
-                self.showImmediately(panel)
-            }
-        }
-    }
-    
-    private func clearDidBecomeActiveObserver() {
-        if let observer = didBecomeActiveObserver {
-            NotificationCenter.default.removeObserver(observer)
-            didBecomeActiveObserver = nil
-        }
-        isScheduledToShow = false
-    }
-    
-    private func showImmediately(_ panel: NSPanel) {
         panel.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
-        NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
-        // panel.orderFrontRegardless()
-        
+
         Task { await vm?.initializeOnOpen() }
-        
-        // Add resign-active observer only once
-        addResignActiveObserver()
-    }
-    
-    private func addResignActiveObserver() {
-        // Remove previous observer if any
-        if let observer = didResignActiveObserver {
-            NotificationCenter.default.removeObserver(observer)
-        }
-        
-        didResignActiveObserver = NotificationCenter.default.addObserver(
-            forName: NSApplication.didResignActiveNotification,
-            object: nil,
+
+        // close when the panel loses the keyboard: a click elsewhere, switching apps, Settings opening
+        if let observer = didResignKeyObserver { NotificationCenter.default.removeObserver(observer) }
+        didResignKeyObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didResignKeyNotification,
+            object: panel,
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in
@@ -150,7 +97,7 @@ extension FloatingPanelHandler {
             }
         }
     }
-    
+
     @MainActor
     func closePanel() {
         guard let panel else { return }
@@ -162,10 +109,9 @@ extension FloatingPanelHandler {
         vm?.stopAutoRefresh()
         vm?.closeActionMenu()
         
-        // Clean up VM and observers
-        if let observer = didResignActiveObserver {
+        if let observer = didResignKeyObserver {
             NotificationCenter.default.removeObserver(observer)
-            didResignActiveObserver = nil
+            didResignKeyObserver = nil
         }
     }
     

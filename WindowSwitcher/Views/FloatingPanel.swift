@@ -13,7 +13,8 @@ final class FloatingPanel<Content: View>: NSPanel {
         
         super.init(
             contentRect: contentRect,
-            styleMask: [.titled, .closable, .fullSizeContentView, .nonactivatingPanel],
+            // final style from the start: changing the style mask later can drop the non-activating behavior
+            styleMask: [.borderless, .fullSizeContentView, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
@@ -28,9 +29,6 @@ final class FloatingPanel<Content: View>: NSPanel {
     // MARK: - Configuration
     
     private func configureAppearance() {
-        titleVisibility = .hidden
-        titlebarAppearsTransparent = true
-        styleMask.remove(.titled)
         isMovableByWindowBackground = true
     }
     
