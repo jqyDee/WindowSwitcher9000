@@ -50,7 +50,9 @@ extension WindowSwitcherViewModel {
         // closes at once and keeps the input (and math mode) for the next time the panel opens
         actions.append(PanelAction(.closePanel, "Close", icon: "xmark", chord: .shiftEscape))
 
-        // App toggles (formerly the /commands/), titled by what they will do now.
+        // App toggles (formerly the /commands/), titled by what they will do now; only in the switcher,
+        // so the calculator's and clipboard's menus stay about their own entries.
+        guard mode == .windows else { return actions }
         actions.append(PanelAction(.toggleDockIcon,
                                    MenuBarHandler.shared.isDockHidden ? "Show Dock Icon" : "Hide Dock Icon",
                                    icon: "dock.rectangle", keyLabel: ""))
