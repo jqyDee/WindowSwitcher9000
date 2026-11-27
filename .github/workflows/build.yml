@@ -24,6 +24,10 @@ jobs:
         with:
           xcode-version: 'latest-stable'
 
+      - name: Test calculator
+        working-directory: Packages/Calculator
+        run: swift test
+
       - name: Extract version
         id: get_version
         run: |
