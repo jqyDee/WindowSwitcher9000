@@ -47,16 +47,18 @@ final class FloatingPanelHandler {
     
     // MARK: - Public API
     
-    /// The switcher hotkey. A mode opened by its own hotkey belongs to that hotkey, so this always
-    /// shows the window list then (switching to it if the panel is open in such a mode).
+    /// The switcher hotkey. Every hotkey opens its own view: this one always opens the window list,
+    /// whatever mode the panel was left in (a search typed in the list is kept). Pressed while the
+    /// panel is open, in any mode, it closes it.
     @MainActor
     func togglePanel() {
-        if vm?.isModeOpenedDirectly == true {
-            vm?.exitMode()
-            if let panel, panel.isKeyWindow { return }
+        if let panel, panel.isKeyWindow {
+            closePanel()
+            return
         }
-        if let panel = panel {
-            panel.isKeyWindow ? closePanel() : showPanel(panel)
+        if vm?.mode != .windows { vm?.exitMode() }
+        if let panel {
+            showPanel(panel)
         } else {
             openPanel()
         }
@@ -66,7 +68,8 @@ final class FloatingPanelHandler {
     /// resets it to the switcher.
     @MainActor
     func togglePanel(directly mode: PanelMode) {
-        if let panel, panel.isKeyWindow, vm?.mode == mode, vm?.isModeOpenedDirectly == true {
+        // already showing this mode (opened by this hotkey or by typing its prefix): close
+        if let panel, panel.isKeyWindow, vm?.mode == mode {
             vm?.exitMode()
             closePanel()
             return
