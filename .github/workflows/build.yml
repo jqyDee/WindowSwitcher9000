@@ -10,7 +10,8 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-latest
+    # macOS 26 / Xcode 26+ required (Liquid Glass, macOS 26 deployment target, KeyboardShortcuts 3.x)
+    runs-on: macos-26
     # This ensures the entire job only runs if it's a tag push or a pull request/main push
     # To strictly limit the RELEASE part, we use conditional steps below.
     
@@ -21,7 +22,7 @@ jobs:
       - name: Set up Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: 'latest'
+          xcode-version: 'latest-stable'
 
       - name: Extract version
         id: get_version
