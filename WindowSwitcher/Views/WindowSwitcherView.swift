@@ -71,13 +71,21 @@ struct WindowSwitcherView: View {
     var resultsCard: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                windowList
-                    .frame(width: listWidth)
+                if vm.isMathMode {
+                    CalculatorHistoryView(
+                        calculator: vm.calculator,
+                        cornerRadius: cardCornerRadius - listPadding,
+                        padding: listPadding
+                    )
+                } else {
+                    windowList
+                        .frame(width: listWidth)
 
-                if vm.isPreviewEnabled {
-                    Divider()
-                    previewPanel
-                        .frame(width: previewWidth)
+                    if vm.isPreviewEnabled {
+                        Divider()
+                        previewPanel
+                            .frame(width: previewWidth)
+                    }
                 }
             }
             .frame(maxHeight: .infinity)
@@ -89,7 +97,8 @@ struct WindowSwitcherView: View {
     // MARK: - parts
     var searchBar: some View {
         HStack(spacing: 12) {
-            Image(systemName: "magnifyingglass")
+            Image(systemName: vm.isMathMode ? "function" : "magnifyingglass")
+                .frame(width: 24)
                 .font(.system(size: 20, weight: .medium))
                 .foregroundStyle(.secondary)
 
@@ -103,9 +112,17 @@ struct WindowSwitcherView: View {
                 onSettings: {
                     FloatingPanelHandler.shared.closePanel()
                     MenuBarHandler.shared.openSettings()
-                }
+                },
+                onCommandEnter: { vm.handleCommandEnter() },
+                onBackspaceWhenEmpty: { vm.handleBackspaceOnEmpty() },
+                onCommandBackspace: { vm.handleCommandBackspace() },
+                placeholder: vm.isMathMode ? "Calculate ..." : "Find the Program in your mess ..."
             )
             .frame(height: 30)
+
+            if case .math(let expression) = vm.inputMode {
+                CalculatorResultLabel(calculator: vm.calculator, expression: expression)
+            }
         }
         .padding(.horizontal, 20)
     }
@@ -128,9 +145,10 @@ struct WindowSwitcherView: View {
                             }
                     }
                 }
-                .padding(listPadding)
             }
             .scrollIndicators(.never)
+            // margins, not padding: scrollTo keeps rows inside them, so the gap survives scrolling
+            .contentMargins(listPadding, for: .scrollContent)
             .onChange(of: vm.selectedIndex) { _, newIndex in
                 let count = vm.displayedWindows.count
                 

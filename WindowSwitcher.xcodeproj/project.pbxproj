@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0916AAE82E6E37470000B7B3 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 0916AAE72E6E37470000B7B3 /* KeyboardShortcuts */; };
+		0916AAF02E6E37470000B7B3 /* Calculator in Frameworks */ = {isa = PBXBuildFile; productRef = 0916AAF12E6E37470000B7B3 /* Calculator */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -46,6 +47,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0916AAE82E6E37470000B7B3 /* KeyboardShortcuts in Frameworks */,
+				0916AAF02E6E37470000B7B3 /* Calculator in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -91,6 +93,7 @@
 			name = WindowSwitcher;
 			packageProductDependencies = (
 				0916AAE72E6E37470000B7B3 /* KeyboardShortcuts */,
+				0916AAF12E6E37470000B7B3 /* Calculator */,
 			);
 			productName = WindowSwitcher;
 			productReference = 09983F922E66F7E300C65495 /* WindowSwitcher.app */;
@@ -122,6 +125,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				0916AAE62E6E37470000B7B3 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
+				0916AAF22E6E37470000B7B3 /* XCLocalSwiftPackageReference "Packages/Calculator" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 09983F932E66F7E300C65495 /* Products */;
@@ -369,6 +373,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		0916AAF22E6E37470000B7B3 /* XCLocalSwiftPackageReference "Packages/Calculator" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/Calculator;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		0916AAE62E6E37470000B7B3 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -385,6 +396,10 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 0916AAE62E6E37470000B7B3 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
 			productName = KeyboardShortcuts;
+		};
+		0916AAF12E6E37470000B7B3 /* Calculator */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Calculator;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -12,6 +12,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     case about = "About"
     case general = "General"
     case appearance = "Appearance"
+    case calculator = "Calculator"
     case privacy = "Privacy"
     case advanced = "Advanced"
     
@@ -22,6 +23,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .about: return "info.circle"
         case .general: return "gearshape"
         case .appearance: return "paintpalette"
+        case .calculator: return "function"
         case .privacy: return "hand.raised"
         case .advanced: return "hammer"
         }
@@ -58,6 +60,7 @@ struct SettingsView: View {
                 case .about: AboutView()
                 case .general: GeneralSettingsView()
                 case .appearance: AppearanceSettingsView()
+                case .calculator: CalculatorSettingsView()
                 case .privacy: PrivacySettingsView()
                 case .advanced: AdvancedSettingsView()
                 case .none: Text("Select a category")
@@ -160,6 +163,47 @@ struct AppearanceSettingsView: View {
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+struct CalculatorSettingsView: View {
+    @ObservedObject private var calculator = CalculatorViewModel.shared
+    @State private var isConfirmingClear = false
+
+    var body: some View {
+        Form {
+            Section {
+                LabeledContent("Keep Last") {
+                    Stepper(
+                        "\(calculator.historyLimit) calculations",
+                        value: $calculator.historyLimit,
+                        in: CalculatorViewModel.historyLimitRange,
+                        step: 10
+                    )
+                    .monospacedDigit()
+                }
+                LabeledContent("Saved") {
+                    Text("\(calculator.history.count)").monospacedDigit()
+                }
+                LabeledContent("Clear History") {
+                    Button("Clear…", role: .destructive) { isConfirmingClear = true }
+                        .disabled(calculator.history.isEmpty)
+                }
+            } header: {
+                Text("History")
+            } footer: {
+                Text("Lowering the limit deletes the oldest calculations beyond it. In math mode, ⌘⌫ deletes the selected entry.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .confirmationDialog(
+            "Delete all \(calculator.history.count) saved calculations?",
+            isPresented: $isConfirmingClear
+        ) {
+            Button("Clear History", role: .destructive) { calculator.clearHistory() }
+        }
     }
 }
 

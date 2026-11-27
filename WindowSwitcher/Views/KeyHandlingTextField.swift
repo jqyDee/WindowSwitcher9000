@@ -17,6 +17,12 @@ struct KeyHandlingTextField: NSViewRepresentable {
     var onTab: (() -> Void)?
     var onShiftTab: (() -> Void)?
     var onSettings: (() -> Void)?
+    var onCommandEnter: (() -> Void)?
+    /// Backspace pressed while the field is empty.
+    var onBackspaceWhenEmpty: (() -> Void)?
+    /// ⌘⌫; return true if handled, otherwise the field deletes to the start of the line.
+    var onCommandBackspace: (() -> Bool)?
+    var placeholder = "Find the Program in your mess ..."
     
     func makeNSView(context: Context) -> NSTextField {
         let field = FocusTextField()
@@ -25,10 +31,6 @@ struct KeyHandlingTextField: NSViewRepresentable {
         field.backgroundColor = .clear
         field.font = NSFont.systemFont(ofSize: 20)
         // Brighter than the default placeholder color so it stays readable on the dark-tinted glass
-        field.placeholderAttributedString = NSAttributedString(
-            string: "Find the Program in your mess ...",
-            attributes: [.font: NSFont.systemFont(ofSize: 20), .foregroundColor: NSColor.secondaryLabelColor]
-        )
         field.focusRingType = .none
         field.target = context.coordinator
         field.action = #selector(context.coordinator.enterPressed)
@@ -37,9 +39,17 @@ struct KeyHandlingTextField: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSTextField, context: Context) {
         nsView.stringValue = text
+        if nsView.placeholderAttributedString?.string != placeholder {
+            // Brighter than the default placeholder color so it stays readable on the dark-tinted glass
+            nsView.placeholderAttributedString = NSAttributedString(
+                string: placeholder,
+                attributes: [.font: NSFont.systemFont(ofSize: 20), .foregroundColor: NSColor.secondaryLabelColor]
+            )
+        }
         
         if let focusField = nsView as? FocusTextField {
             focusField.onSettings = onSettings
+            focusField.onCommandEnter = onCommandEnter
         }
         
         if isFocused.wrappedValue && nsView.window?.firstResponder != nsView.currentEditor() {
@@ -76,6 +86,11 @@ struct KeyHandlingTextField: NSViewRepresentable {
                  #selector(NSResponder.moveUp(_:)):
                 parent.onShiftTab?()
                 return true
+            case #selector(NSResponder.deleteBackward(_:)) where textView.string.isEmpty:
+                parent.onBackspaceWhenEmpty?()
+                return true
+            case #selector(NSResponder.deleteToBeginningOfLine(_:)):
+                return parent.onCommandBackspace?() ?? false
             case #selector(NSResponder.cancelOperation(_:)):
                 parent.onEscape?()
                 return true

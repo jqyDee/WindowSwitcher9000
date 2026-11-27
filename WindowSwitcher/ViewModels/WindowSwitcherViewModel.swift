@@ -10,6 +10,14 @@ import AppKit
 import Combine
 import SwiftUI
 
+/// What the panel does with the current input.
+public enum InputMode: Equatable {
+    case windows
+    case command(Command)
+    /// Math mode, entered by typing `$`; the whole input is the expression.
+    case math(expression: String)
+}
+
 @MainActor
 public final class WindowSwitcherViewModel: ObservableObject {
     // MARK: - Published Properties (Inputs & Outputs)
@@ -24,7 +32,17 @@ public final class WindowSwitcherViewModel: ObservableObject {
     @AppStorage("PanelHeight") public var panelHeight: Double = 400.0
     @AppStorage("PreviewWidthPercentage") public var previewWidthPercentage: Double = 0.55
     
-    @Published public var filterText: String = ""
+    @Published public var filterText: String = "" {
+        didSet {
+            // `$` only switches the mode; it never stays in the field
+            if !isMathMode, filterText.hasPrefix("$") {
+                isMathMode = true
+                filterText = String(filterText.dropFirst())
+            }
+        }
+    }
+    /// Entered by typing `$`, left with backspace on an empty field or Escape.
+    @Published public private(set) var isMathMode = false
     @Published public var windows: [Window] = []
     @Published public var displayedWindows: [Window] = []
     @Published public var selectedIndex: Int = 0 {
@@ -36,6 +54,13 @@ public final class WindowSwitcherViewModel: ObservableObject {
     @Published public var hasScreenCaptureAccess: Bool? = nil
     @Published public var footerCommands: String? = nil
     @Published public var cachedLaunchableApps: [LaunchableApp] = []
+    public let calculator = CalculatorViewModel.shared
+
+    public var inputMode: InputMode {
+        if isMathMode { return .math(expression: filterText) }
+        if let command = CommandHandler.extractCommand(from: filterText) { return .command(command) }
+        return .windows
+    }
     
     // MARK: - Dependencies
     @AppStorage("WindowService") private var windowServiceKey: String = "yabai"
@@ -78,6 +103,10 @@ public final class WindowSwitcherViewModel: ObservableObject {
             .sink { [weak self] _ in
                 guard let self else { return }
                 Task {
+                    if case .math = self.inputMode {
+                        self.calculator.selectedIndex = nil
+                        return
+                    }
                     self.recomputeDisplay()
                     self.selectedIndex = 0
                 }
@@ -164,11 +193,13 @@ public final class WindowSwitcherViewModel: ObservableObject {
     }
 
     public func moveSelectionForward() {
+        if case .math = inputMode { return calculator.moveSelectionForward() }
         guard !displayedWindows.isEmpty else { return }
         selectedIndex = (selectedIndex + 1) % displayedWindows.count
     }
 
     public func moveSelectionBackward() {
+        if case .math = inputMode { return calculator.moveSelectionBackward() }
         guard !displayedWindows.isEmpty else { return }
         selectedIndex = (selectedIndex - 1 + displayedWindows.count) % displayedWindows.count
     }
@@ -228,9 +259,15 @@ public final class WindowSwitcherViewModel: ObservableObject {
     }
 
     public func handleEnter() {
-        if let cmd = CommandHandler.extractCommand(from: filterText) {
-            self.footerCommands = CommandHandler.handle(cmd)
+        switch inputMode {
+        case .command(let cmd):
+            footerCommands = CommandHandler.handle(cmd)
             return
+        case .math(let expression):
+            apply(calculator.submit(expression))
+            return
+        case .windows:
+            break
         }
         
         filterText = ""
@@ -259,12 +296,44 @@ public final class WindowSwitcherViewModel: ObservableObject {
     public func handleEscape() {
         if !filterText.isEmpty {
             filterText = ""
+        } else if isMathMode {
+            exitMathMode()
         } else {
             FloatingPanelHandler.shared.closePanel()
         }
     }
 
+    /// ⌘Enter: in math mode copies the result only; elsewhere the same as Enter.
+    public func handleCommandEnter() {
+        guard case .math(let expression) = inputMode else { return handleEnter() }
+        apply(calculator.copyResult(expression))
+    }
+
+    private func apply(_ outcome: CalculatorViewModel.SubmitOutcome) {
+        footerCommands = outcome.feedback
+        if let input = outcome.newInput { filterText = input }
+    }
+
+    /// ⌘⌫: in math mode deletes the selected history entry. Returns false if unhandled,
+    /// so the field still deletes to the start of the line.
+    public func handleCommandBackspace() -> Bool {
+        guard case .math = inputMode else { return false }
+        return calculator.removeSelectedEntry()
+    }
+
+    /// Backspace in an empty field leaves math mode.
+    public func handleBackspaceOnEmpty() {
+        if isMathMode { exitMathMode() }
+    }
+
     // MARK: - Private Helpers
+
+    private func exitMathMode() {
+        isMathMode = false
+        footerCommands = nil
+        recomputeDisplay()
+        selectedIndex = 0
+    }
 
     private static func windowSort(lhs: Window, rhs: Window) -> Bool {
         lhs.app == rhs.app ? lhs.title < rhs.title : lhs.app < rhs.app
