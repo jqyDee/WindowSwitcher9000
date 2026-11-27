@@ -9,20 +9,22 @@ import SwiftUI
 import AppKit
 
 class FocusTextField: NSTextField {
-    var onSettings: (() -> Void)?
-    var onCommandEnter: (() -> Void)?
+    /// ⌘-chords the field doesn't handle itself; return true if handled.
+    var onChord: ((KeyChord) -> Bool)?
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        // Check for Cmd + ,
-        if event.modifierFlags.contains(.command) && event.charactersIgnoringModifiers == "," {
-            onSettings?()
-            return true
-        }
-        // Cmd + Return / keypad Enter
-        if event.modifierFlags.contains(.command) && (event.keyCode == 36 || event.keyCode == 76) {
-            onCommandEnter?()
+        if event.modifierFlags.contains(.command), let chord = Self.chord(for: event), onChord?(chord) == true {
             return true
         }
         return super.performKeyEquivalent(with: event)
+    }
+
+    private static func chord(for event: NSEvent) -> KeyChord? {
+        switch (event.keyCode, event.charactersIgnoringModifiers?.lowercased()) {
+        case (36, _), (76, _): return .commandEnter  // Return, keypad Enter
+        case (_, ","): return .commandComma
+        case (_, "k"): return .commandK
+        default: return nil
+        }
     }
 }

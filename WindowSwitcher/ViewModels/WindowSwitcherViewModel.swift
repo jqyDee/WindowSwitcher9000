@@ -41,8 +41,15 @@ public final class WindowSwitcherViewModel: ObservableObject {
             }
         }
     }
-    /// Entered by typing `$`, left with backspace on an empty field or Escape.
+    /// Entered by typing `$`; left with Esc on an empty field.
     @Published public private(set) var isMathMode = false
+
+    /// The ⌘K action menu. While it is open the search field edits `actionFilter` instead of `filterText`.
+    @Published public internal(set) var isActionMenuOpen = false
+    @Published public var actionFilter = "" {
+        didSet { actionSelection = 0 }
+    }
+    @Published public var actionSelection = 0
     @Published public var windows: [Window] = []
     @Published public var displayedWindows: [Window] = []
     @Published public var selectedIndex: Int = 0 {
@@ -193,12 +200,14 @@ public final class WindowSwitcherViewModel: ObservableObject {
     }
 
     public func moveSelectionForward() {
+        if isActionMenuOpen { return moveActionSelection(by: 1) }
         if case .math = inputMode { return calculator.moveSelectionForward() }
         guard !displayedWindows.isEmpty else { return }
         selectedIndex = (selectedIndex + 1) % displayedWindows.count
     }
 
     public func moveSelectionBackward() {
+        if isActionMenuOpen { return moveActionSelection(by: -1) }
         if case .math = inputMode { return calculator.moveSelectionBackward() }
         guard !displayedWindows.isEmpty else { return }
         selectedIndex = (selectedIndex - 1 + displayedWindows.count) % displayedWindows.count
@@ -294,7 +303,9 @@ public final class WindowSwitcherViewModel: ObservableObject {
     }
     
     public func handleEscape() {
-        if !filterText.isEmpty {
+        if isActionMenuOpen {
+            closeActionMenu()
+        } else if !filterText.isEmpty {
             filterText = ""
         } else if isMathMode {
             exitMathMode()
@@ -303,32 +314,16 @@ public final class WindowSwitcherViewModel: ObservableObject {
         }
     }
 
-    /// ⌘Enter: in math mode copies the result only; elsewhere the same as Enter.
-    public func handleCommandEnter() {
-        guard case .math(let expression) = inputMode else { return handleEnter() }
-        apply(calculator.copyResult(expression))
-    }
-
-    private func apply(_ outcome: CalculatorViewModel.SubmitOutcome) {
+    func apply(_ outcome: CalculatorViewModel.SubmitOutcome) {
         footerCommands = outcome.feedback
         if let input = outcome.newInput { filterText = input }
     }
 
-    /// ⌘⌫: in math mode deletes the selected history entry. Returns false if unhandled,
-    /// so the field still deletes to the start of the line.
-    public func handleCommandBackspace() -> Bool {
-        guard case .math = inputMode else { return false }
-        return calculator.removeSelectedEntry()
-    }
-
-    /// Backspace in an empty field leaves math mode.
-    public func handleBackspaceOnEmpty() {
-        if isMathMode { exitMathMode() }
-    }
-
     // MARK: - Private Helpers
 
-    private func exitMathMode() {
+    /// Leaves math mode, discarding the expression being typed.
+    func exitMathMode() {
+        filterText = ""
         isMathMode = false
         footerCommands = nil
         recomputeDisplay()

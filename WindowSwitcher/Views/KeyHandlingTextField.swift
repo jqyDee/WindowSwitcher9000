@@ -12,16 +12,11 @@ struct KeyHandlingTextField: NSViewRepresentable {
     @Binding var text: String
     var isFocused: FocusState<Bool>.Binding
     
-    var onEnter: (() -> Void)?
+    /// ↩ and ⌘-chords; return true if handled, otherwise the field applies its default (⌘⌫ deletes the line).
+    var onChord: ((KeyChord) -> Bool)?
     var onEscape: (() -> Void)?
     var onTab: (() -> Void)?
     var onShiftTab: (() -> Void)?
-    var onSettings: (() -> Void)?
-    var onCommandEnter: (() -> Void)?
-    /// Backspace pressed while the field is empty.
-    var onBackspaceWhenEmpty: (() -> Void)?
-    /// ⌘⌫; return true if handled, otherwise the field deletes to the start of the line.
-    var onCommandBackspace: (() -> Bool)?
     var placeholder = "Find the Program in your mess ..."
     
     func makeNSView(context: Context) -> NSTextField {
@@ -38,7 +33,9 @@ struct KeyHandlingTextField: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: NSTextField, context: Context) {
-        nsView.stringValue = text
+        // keep the coordinator on the current binding: it changes while the action menu is open
+        context.coordinator.parent = self
+        if nsView.stringValue != text { nsView.stringValue = text }
         if nsView.placeholderAttributedString?.string != placeholder {
             // Brighter than the default placeholder color so it stays readable on the dark-tinted glass
             nsView.placeholderAttributedString = NSAttributedString(
@@ -48,8 +45,7 @@ struct KeyHandlingTextField: NSViewRepresentable {
         }
         
         if let focusField = nsView as? FocusTextField {
-            focusField.onSettings = onSettings
-            focusField.onCommandEnter = onCommandEnter
+            focusField.onChord = onChord
         }
         
         if isFocused.wrappedValue && nsView.window?.firstResponder != nsView.currentEditor() {
@@ -73,7 +69,7 @@ struct KeyHandlingTextField: NSViewRepresentable {
         }
 
         @objc func enterPressed() {
-            parent.onEnter?()
+            _ = parent.onChord?(.enter)
         }
 
         func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
@@ -86,12 +82,13 @@ struct KeyHandlingTextField: NSViewRepresentable {
                  #selector(NSResponder.moveUp(_:)):
                 parent.onShiftTab?()
                 return true
-            case #selector(NSResponder.deleteBackward(_:)) where textView.string.isEmpty:
-                parent.onBackspaceWhenEmpty?()
-                return true
             case #selector(NSResponder.deleteToBeginningOfLine(_:)):
-                return parent.onCommandBackspace?() ?? false
+                return parent.onChord?(.commandBackspace) ?? false
             case #selector(NSResponder.cancelOperation(_:)):
+                if NSApp.currentEvent?.modifierFlags.contains(.shift) == true,
+                   parent.onChord?(.shiftEscape) == true {
+                    return true
+                }
                 parent.onEscape?()
                 return true
             default:

@@ -58,6 +58,9 @@ struct WindowSwitcherView: View {
                     .glassEffect(glass, in: RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
             }
         }
+        // Outside the glass container on purpose: content inside a glass shape (and animating it)
+        // disturbs the glass rendering, which stayed washed out after the menu closed.
+        .overlay(alignment: .bottomTrailing) { actionMenu }
         .foregroundStyle(.primary)
         .padding(12) // room for the glass edge highlights and shadow
         .onAppear {
@@ -95,6 +98,28 @@ struct WindowSwitcherView: View {
     }
 
     // MARK: - parts
+    /// Sits above the results card's bottom-right corner, clear of the footer.
+    var actionMenu: some View {
+        ZStack {
+            if vm.isActionMenuOpen {
+                ActionMenuView(
+                    actions: vm.menuActions,
+                    filter: vm.actionFilter,
+                    selection: vm.actionSelection,
+                    onRun: { vm.perform($0) }
+                )
+                .padding(.trailing, listPadding)
+                .padding(.bottom, footerHeight + listPadding)
+                .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.15), value: vm.isActionMenuOpen)
+    }
+
+    private var inputPlaceholder: String {
+        vm.isMathMode ? "Calculate ..." : "Find the Program in your mess ..."
+    }
+
     var searchBar: some View {
         HStack(spacing: 12) {
             Image(systemName: vm.isMathMode ? "function" : "magnifyingglass")
@@ -103,22 +128,28 @@ struct WindowSwitcherView: View {
                 .foregroundStyle(.secondary)
 
             KeyHandlingTextField(
-                text: $vm.filterText,
+                text: vm.isActionMenuOpen ? $vm.actionFilter : $vm.filterText,
                 isFocused: $isFocused,
-                onEnter: { vm.handleEnter() },
+                onChord: { vm.handleChord($0) },
                 onEscape: { vm.handleEscape() },
                 onTab: { vm.moveSelectionForward() },
                 onShiftTab: { vm.moveSelectionBackward() },
-                onSettings: {
-                    FloatingPanelHandler.shared.closePanel()
-                    MenuBarHandler.shared.openSettings()
-                },
-                onCommandEnter: { vm.handleCommandEnter() },
-                onBackspaceWhenEmpty: { vm.handleBackspaceOnEmpty() },
-                onCommandBackspace: { vm.handleCommandBackspace() },
-                placeholder: vm.isMathMode ? "Calculate ..." : "Find the Program in your mess ..."
+                placeholder: inputPlaceholder
             )
             .frame(height: 30)
+            // While the action menu is open the (still focused) field edits the menu's filter,
+            // which the menu shows; the search bar keeps showing the input, like Raycast.
+            .opacity(vm.isActionMenuOpen ? 0 : 1)
+            .overlay(alignment: .leading) {
+                if vm.isActionMenuOpen {
+                    Text(vm.filterText.isEmpty ? inputPlaceholder : vm.filterText)
+                        .font(.system(size: 20))
+                        .foregroundStyle(vm.filterText.isEmpty ? .secondary : .primary)
+                        .lineLimit(1)
+                        .padding(.leading, 2) // the text field's own inset
+                        .allowsHitTesting(false)
+                }
+            }
 
             if case .math(let expression) = vm.inputMode {
                 CalculatorResultLabel(calculator: vm.calculator, expression: expression)
@@ -250,6 +281,15 @@ struct WindowSwitcherView: View {
 
                 Spacer()
                 Text("WindowSwitcher9000").font(.subheadline).foregroundColor(.secondary)
+                Divider().frame(height: 12)
+                Button { vm.handleChord(.commandK) } label: {
+                    HStack(spacing: 6) {
+                        Text("Actions").font(.subheadline)
+                        KeyCaps(KeyChord.commandK.symbol)
+                    }
+                    .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, 18)
             .frame(height: footerHeight)

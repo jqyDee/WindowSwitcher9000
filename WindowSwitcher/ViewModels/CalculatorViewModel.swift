@@ -104,6 +104,7 @@ public final class CalculatorViewModel: ObservableObject {
 
     /// ⌘⌫ on a history entry: deletes it and keeps the selection at the same position.
     /// Returns false when no entry is selected, so the key keeps its text-editing meaning.
+    @discardableResult
     public func removeSelectedEntry() -> Bool {
         guard let index = selectedIndex, history.indices.contains(index) else { return false }
         history.remove(at: index)

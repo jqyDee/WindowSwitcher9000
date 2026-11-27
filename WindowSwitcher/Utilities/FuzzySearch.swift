@@ -25,6 +25,16 @@ public struct FuzzySearch {
         private static let SCORE_MATCH_CAPITAL = 0.7
         private static let SCORE_MATCH_DOT = 0.6
 
+        /// Whether `pattern`'s characters all appear in `text` in order, ignoring case.
+        /// Use this to filter: `score` ranks, but returns a (low) score for most non-matches too.
+        public static func matches(text: String, pattern: String) -> Bool {
+            var remaining = pattern.lowercased()[...]
+            for c in text.lowercased() where c == remaining.first {
+                remaining = remaining.dropFirst()
+            }
+            return remaining.isEmpty
+        }
+
         /// Compute fzy-like score for matching `pattern` against `text`.
         /// Returns nil if pattern does not match as subsequence.
         public static func score(text: String, pattern: String) -> Double? {

@@ -160,6 +160,7 @@ extension FloatingPanelHandler {
         panel.orderOut(nil)
         
         vm?.stopAutoRefresh()
+        vm?.closeActionMenu()
         
         // Clean up VM and observers
         if let observer = didResignActiveObserver {
