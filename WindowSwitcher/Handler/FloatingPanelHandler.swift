@@ -36,18 +36,43 @@ final class FloatingPanelHandler {
             KeyboardShortcuts.onKeyUp(for: .openHotkeyWindow) { [weak self] in
                 self?.togglePanel()
             }
+            KeyboardShortcuts.onKeyUp(for: .openCalculator) { [weak self] in
+                self?.togglePanel(directly: .math)
+            }
+            KeyboardShortcuts.onKeyUp(for: .openClipboardHistory) { [weak self] in
+                self?.togglePanel(directly: .clipboard)
+            }
         }
     }
     
     // MARK: - Public API
     
+    /// The switcher hotkey. A mode opened by its own hotkey belongs to that hotkey, so this always
+    /// shows the window list then (switching to it if the panel is open in such a mode).
     @MainActor
     func togglePanel() {
+        if vm?.isModeOpenedDirectly == true {
+            vm?.exitMode()
+            if let panel, panel.isKeyWindow { return }
+        }
         if let panel = panel {
             panel.isKeyWindow ? closePanel() : showPanel(panel)
         } else {
             openPanel()
         }
+    }
+
+    /// A mode's hotkey: opens the panel directly in that mode; pressed again, closes it and
+    /// resets it to the switcher.
+    @MainActor
+    func togglePanel(directly mode: PanelMode) {
+        if let panel, panel.isKeyWindow, vm?.mode == mode, vm?.isModeOpenedDirectly == true {
+            vm?.exitMode()
+            closePanel()
+            return
+        }
+        if let panel { showPanel(panel) } else { openPanel() }
+        vm?.openDirectly(mode)
     }
 }
 

@@ -39,11 +39,11 @@ extension WindowSwitcherViewModel {
         }
         actions.append(PanelAction(.settings, "Settings", icon: "gearshape", chord: .commandComma))
         // Esc (see handleEscape) steps back: it clears the input first, then on an empty field
-        // leaves the mode, or closes the panel (which ⇧Esc below does as well).
+        // leaves the mode, or closes the panel (as ⇧Esc below does, also for a mode opened by its hotkey).
         if !filterText.isEmpty {
             actions.append(PanelAction(.clearInput, mode == .math ? "Clear Input" : "Clear Search",
                                        icon: "delete.left", keyLabel: "Esc"))
-        } else if mode != .windows {
+        } else if mode != .windows && !isModeOpenedDirectly {
             actions.append(PanelAction(.leaveMode, mode == .math ? "Leave Calculator" : "Leave Clipboard History",
                                        icon: "magnifyingglass", keyLabel: "Esc"))
         }

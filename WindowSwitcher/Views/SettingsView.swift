@@ -90,6 +90,12 @@ struct GeneralSettingsView: View {
                 LabeledContent("Open Switcher") {
                     KeyboardShortcuts.Recorder(for: .openHotkeyWindow)
                 }
+                LabeledContent("Open Calculator") {
+                    KeyboardShortcuts.Recorder(for: .openCalculator)
+                }
+                LabeledContent("Open Clipboard History") {
+                    KeyboardShortcuts.Recorder(for: .openClipboardHistory)
+                }
             }
             Section("System") {
                 Toggle("Hide Dock Icon", isOn: $isDockHidden)
@@ -412,4 +418,7 @@ struct AboutView: View {
 
 extension KeyboardShortcuts.Name {
     static let openHotkeyWindow = Self("openHotkeyWindow")
+    /// Open the panel directly in math / clipboard mode; unset until the user records one.
+    static let openCalculator = Self("openCalculator")
+    static let openClipboardHistory = Self("openClipboardHistory")
 }

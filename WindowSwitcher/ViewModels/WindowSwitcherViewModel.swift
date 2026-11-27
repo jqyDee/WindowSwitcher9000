@@ -61,6 +61,9 @@ public final class WindowSwitcherViewModel: ObservableObject {
         }
     }
     @Published public private(set) var mode: PanelMode = .windows
+    /// The mode was opened by its own hotkey rather than by typing its prefix: Esc on an empty
+    /// field then closes the panel (back to the switcher) instead of returning to the window list.
+    @Published public private(set) var isModeOpenedDirectly = false
 
     /// The ⌘K action menu. While it is open the search field edits `actionFilter` instead of `filterText`.
     @Published public internal(set) var isActionMenuOpen = false
@@ -347,10 +350,22 @@ public final class WindowSwitcherViewModel: ObservableObject {
         } else if !filterText.isEmpty {
             filterText = ""
         } else if mode != .windows {
+            let closes = isModeOpenedDirectly
             exitMode()
+            if closes { FloatingPanelHandler.shared.closePanel() }
         } else {
             FloatingPanelHandler.shared.closePanel()
         }
+    }
+
+    /// A mode's hotkey: shows that mode, keeping its input if it is already showing it.
+    public func openDirectly(_ newMode: PanelMode) {
+        closeActionMenu()
+        if mode != newMode {
+            exitMode()
+            mode = newMode
+        }
+        isModeOpenedDirectly = newMode != .windows
     }
 
     func apply(_ outcome: CalculatorViewModel.SubmitOutcome) {
@@ -364,6 +379,7 @@ public final class WindowSwitcherViewModel: ObservableObject {
     func exitMode() {
         filterText = ""
         mode = .windows
+        isModeOpenedDirectly = false
         footerCommands = nil
         recomputeDisplay()
         selectedIndex = 0

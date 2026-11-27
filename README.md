@@ -86,7 +86,8 @@ the right of the search bar. `RETURN` saves the calculation and copies the resul
 - Select a past calculation with the arrow keys: `RETURN` puts it into the field, `CMD + RETURN` copies its result, `CMD + BACKSPACE` deletes it.
 - `ESC` clears the field, and leaves the calculator when the field is empty.
 
-The size of the history can be capped, and the history cleared, in `Settings -> Calculator`.
+The size of the history can be capped, and the history cleared, in `Settings -> Calculator`. To open the calculator directly, record
+a hotkey under `Settings -> General -> Keyboard -> Open Calculator`; `ESC` on an empty field then closes it again.
 
 # Clipboard History
 Everything you copy (text, images and files) is kept in a history. Type `#` to open it: the list shows your copies newest first, the
@@ -95,7 +96,8 @@ the panel, so `CMD + V` pastes it where you were. `CMD + BACKSPACE` deletes an e
 
 Copying something that is already in the history moves it to the top instead of adding it twice. Content that password managers mark
 as concealed is never saved. The history stays on your Mac (`~/Library/Application Support/WindowSwitcher9000/Clipboard`); its size
-and a Clear button are in `Settings -> Clipboard`.
+and a Clear button are in `Settings -> Clipboard`. A hotkey to open it directly can be recorded under
+`Settings -> General -> Keyboard -> Open Clipboard History`; `ESC` on an empty search then closes it again.
 
 # Actions
 `CMD + K` opens the action menu, Raycast-style: it lists everything you can do with the current selection together with its key.
