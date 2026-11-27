@@ -19,44 +19,7 @@ public actor YabaiClient: WindowServiceProtocol {
     public let yabaiPath: URL
     
     public init(yabaiPath: String? = nil) {
-        if let provided = yabaiPath {
-            self.yabaiPath = URL(fileURLWithPath: provided)
-        } else if let resolved = YabaiClient.resolveYabaiPath() {
-            self.yabaiPath = resolved
-        } else {
-            // fallback for Homebrew on Apple Silicon
-            self.yabaiPath = URL(fileURLWithPath: "/opt/homebrew/bin/yabai")
-        }
-    }
-    
-    private static func resolveYabaiPath() -> URL? {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/which")
-        process.arguments = ["yabai"]
-        // GUI apps get a stripped PATH from launchd; inject Homebrew paths so `which` can find yabai
-        var env = ProcessInfo.processInfo.environment
-        env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-        process.environment = env
-
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = Pipe()
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-
-            guard process.terminationStatus == 0 else { return nil }
-
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            guard let path = String(data: data, encoding: .utf8)?
-                .trimmingCharacters(in: .whitespacesAndNewlines),
-                  !path.isEmpty else { return nil }
-
-            return URL(fileURLWithPath: path)
-        } catch {
-            return nil
-        }
+        self.yabaiPath = yabaiPath.map { URL(fileURLWithPath: $0) } ?? ExecutableResolver.resolve("yabai")
     }
     
     private func run(arguments: [String]) throws -> Data {

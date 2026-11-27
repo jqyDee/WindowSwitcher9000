@@ -41,7 +41,14 @@ public final class WindowSwitcherViewModel: ObservableObject {
     @AppStorage("WindowService") private var windowServiceKey: String = "yabai"
     private lazy var yabaiClient: WindowServiceProtocol = YabaiClient()
     private lazy var nativeClient: WindowServiceProtocol = NativeClient()
-    private var activeService: WindowServiceProtocol { windowServiceKey == "native" ? nativeClient : yabaiClient }
+    private lazy var aerospaceClient: WindowServiceProtocol = AerospaceClient()
+    private var activeService: WindowServiceProtocol {
+        switch windowServiceKey {
+        case "native": return nativeClient
+        case "aerospace": return aerospaceClient
+        default: return yabaiClient
+        }
+    }
     private let snapshotService: SnapshotServiceProtocol
 
     // MARK: - Internals

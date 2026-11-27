@@ -39,16 +39,13 @@ public final class SnapshotService: SnapshotServiceProtocol {
         }
 
         guard let scWindow = content.windows.first(where: {
-            guard let owningPID = $0.owningApplication?.processID else { return false }
-            let titleMatches = window.title.isEmpty || ($0.title ?? "").localizedCaseInsensitiveContains(window.title)
-            let idMatches: Bool
+            guard let owningPID = $0.owningApplication?.processID, owningPID == window.pid else { return false }
+            // A CGWindowID identifies the window uniquely; only fall back to title matching without one.
+            // (Titles can differ, e.g. AeroSpace windows without a title are shown under their app name.)
             if let windowId = UInt32(window.id) {
-                idMatches = $0.windowID == windowId
-            } else {
-                idMatches = true
+                return $0.windowID == windowId
             }
-            
-            return owningPID == window.pid && titleMatches && idMatches
+            return window.title.isEmpty || ($0.title ?? "").localizedCaseInsensitiveContains(window.title)
         }) else {
             throw SnapshotError.windowNotFound
         }

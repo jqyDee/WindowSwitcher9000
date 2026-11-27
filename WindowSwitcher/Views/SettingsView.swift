@@ -94,10 +94,11 @@ struct GeneralSettingsView: View {
                 LabeledContent("Window Service") {
                     Picker("", selection: $windowServiceKey) {
                         Text("Yabai").tag("yabai")
+                        Text("AeroSpace").tag("aerospace")
                         Text("Native").tag("native")
                     }
                     .pickerStyle(.segmented)
-                    .frame(width: 160)
+                    .frame(width: 260)
                 }
             }
         }
