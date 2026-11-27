@@ -286,7 +286,7 @@ struct AboutView: View {
                     .foregroundColor(.secondary)
             }
 
-            Text("A fast, keyboard-centric window switcher for macOS, powered by Yabai.")
+            Text("A fast, keyboard-centric window switcher for macOS, powered by yabai, AeroSpace or native macOS APIs.")
                 .font(.body)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)

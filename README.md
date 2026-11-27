@@ -15,19 +15,28 @@ and then also your installed applications!
 (So basically a window switcher and application launcher in one?!)
 
 The Preview functionality needs Screen Capture Permissions. 
-This can also be disabled in the Menu Bar if not needed. 
-So far this program has been working somewhat realiable on MacOS 15.5. 
-*This is also the only MacOS version this program got tested on!*
+This can also be disabled in the Settings (`Appearance -> Enable Preview`) if not needed. 
+
+The switcher is styled with the macOS Liquid Glass look, so it requires **macOS 26 or newer**.
+It is currently developed and tested on macOS 27.
+
+# Window Services
+The switcher can get its windows from one of three sources. Pick one in `Settings -> General -> Window Service`:
+
+- **[yabai](https://github.com/koekeishiya/yabai)** – the tiling window manager. Lists all windows across all spaces.
+- **[AeroSpace](https://github.com/nikitabobko/AeroSpace)** – the tiling window manager. Lists all windows across all workspaces
+  (floating ones included) and focusing a window also switches to its workspace.
+- **Native** – no window manager needed. Uses macOS APIs directly, which unfortunately do not expose ALL windows across ALL spaces.
 
 # Limitations
-*Unfortunately this program is only possible through [yabai](https://github.com/koekeishiya/yabai), a tiling window manager. 
-This is because MacOS does not find it necessary to make ALL windows across ALL spaces accessible to the (power-)user!*
+*macOS does not find it necessary to make ALL windows across ALL spaces accessible to the (power-)user!
+So for the full experience you need yabai or AeroSpace; the Native service only sees what macOS is willing to show.*
 
 Sometimes the window titles that yabai spit out are somewhat verbose (e.g. "Personal - 'github url' 'name of repo' ...").
 I would like to add a dynamic filtering that can be set by the user through a GUI Filter Settings Panel for each program idividually.
 
 # Setup
-The Setup is really simple (If you have [yabai](https://github.com/koekeishiya/yabai) ;)).
+The Setup is really simple (If you have [yabai](https://github.com/koekeishiya/yabai) or [AeroSpace](https://github.com/nikitabobko/AeroSpace) ;)).
 
 ## Prebuilt
 Just drag the prebuilt executable from the Latest Release to your Application Folder.
@@ -44,14 +53,14 @@ On first startup the Program launches with a Menu Bar icon. This can be disabled
 The Program then asks for Accessibility Permissions which you should grant in the System Settings
 (Either through the pop-up or in `System Settings -> Privacy & Security -> Accessibility`).
 
-In the Menu Bar menu you can either open the Panel through clicking on `Toggle Switcher` or with the Keyboard Shortcut `CMD + O`.
-*Note that this Keyboard Shortcut only works while the Menu Bar menu is open!*
+In the Menu Bar menu you can open the Panel through clicking on `Toggle Switcher`.
 
 What you probably want to do is set a global Hotkey to open the Switcher. 
-This is done in the `Menu Bar menu -> Set Hotkey -> Open Switcher -> Record Shortcut`.
+This is done in the Settings (`Menu Bar menu -> Settings... -> General -> Open Switcher`): click the field and press your shortcut.
+In the same place you can also choose your Window Service (yabai, AeroSpace or Native).
 
-Now the Switcher Opens through the Hotkey. If the Preview functionality is not disabled previously in the Menu Bar
-menu (`Preview` unchecked), the switcher will ask for Screen Recording Permissions
+Now the Switcher Opens through the Hotkey. If the Preview functionality is not disabled previously in the Settings
+(`Appearance -> Enable Preview` unchecked), the switcher will ask for Screen Recording Permissions
 (Either through the pop-up or in `System Settings -> Privacy & Security -> Screen & System Audio Recording`)
 to take snapshots of the open windows and provide you with a screenshot of the window in the Preview Panel on the right.
 
