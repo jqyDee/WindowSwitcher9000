@@ -34,8 +34,11 @@ final class FloatingPanelHandler {
     private var isScheduledToShow = false
     
     private init() {
-        KeyboardShortcuts.onKeyUp(for: .openHotkeyWindow) { [weak self] in
-            DispatchQueue.main.async { self?.togglePanel() }
+        // KeyboardShortcuts 3.x requires main-actor registration; the action is also delivered on the main actor.
+        Task { @MainActor [weak self] in
+            KeyboardShortcuts.onKeyUp(for: .openHotkeyWindow) { [weak self] in
+                self?.togglePanel()
+            }
         }
     }
     
