@@ -29,7 +29,14 @@ private func SLPSPostEventRecordTo(_ psn: UnsafeMutablePointer<ProcessSerialNumb
 @_silgen_name("_AXUIElementGetWindow")
 private func _AXUIElementGetWindow(_ element: AXUIElement, _ windowID: UnsafeMutablePointer<CGWindowID>) -> AXError
 
+@_silgen_name("CGSCopySpacesForWindows")
+private func CGSCopySpacesForWindows(_ cid: CGSConnectionID, _ mask: Int, _ windowIDs: CFArray) -> CFArray
+
+@_silgen_name("CGSCopyManagedDisplaySpaces")
+private func CGSCopyManagedDisplaySpaces(_ cid: CGSConnectionID) -> CFArray
+
 private let SLPSUserGenerated: UInt32 = 0x200
+private let CGSAllSpacesMask = 0x7
 
 // MARK: - NativeClient
 
@@ -43,16 +50,47 @@ public actor NativeClient: WindowServiceProtocol {
             return []
         }
 
+        let visibleSpaces = Self.visibleSpaceIDs()
+        // Per app: its real windows and their titles, as reported through Accessibility (fetched lazily)
+        var axWindowsByPID: [pid_t: [CGWindowID: String]] = [:]
+        func axWindows(_ pid: pid_t) -> [CGWindowID: String] {
+            if let cached = axWindowsByPID[pid] { return cached }
+            let windows = Self.axWindowTitles(pid: pid)
+            axWindowsByPID[pid] = windows
+            return windows
+        }
+
         return list.compactMap { info -> Window? in
             guard let layer = info[kCGWindowLayer] as? Int, layer == 0 else { return nil }
             guard let windowID = info[kCGWindowNumber] as? Int else { return nil }
             guard let pid = info[kCGWindowOwnerPID] as? pid_t, pid > 0 else { return nil }
 
-            let title = info[kCGWindowName] as? String ?? ""
+            // Only apps with a Dock presence: drops menu-bar apps (e.g. Bitwarden) and system agents/prompts
+            guard let runningApp = NSRunningApplication(processIdentifier: pid),
+                  runningApp.activationPolicy == .regular else { return nil }
+
+            // kCGWindowName is only filled in with Screen Recording permission; Accessibility provides
+            // titles without it (for windows on the current spaces).
+            var title = info[kCGWindowName] as? String ?? ""
+            if title.isEmpty {
+                title = axWindows(pid)[CGWindowID(windowID)] ?? ""
+            }
             guard !title.isEmpty else { return nil }
 
+            let isOnScreen = info[kCGWindowIsOnscreen] as? Bool ?? false
+            if !isOnScreen {
+                let cgWindowID = CGWindowID(windowID)
+                let spaces = CGSCopySpacesForWindows(CGS_CONNECTION, CGSAllSpacesMask, [cgWindowID] as CFArray) as? [Int] ?? []
+                // On no space at all: a closed window the app keeps in memory
+                guard !spaces.isEmpty else { return nil }
+                // Off screen on a space that is showing: real only if the app still lists it (e.g. minimized).
+                // Windows on other spaces can't be checked this way (AX doesn't see them), so they are kept.
+                if spaces.contains(where: visibleSpaces.contains) {
+                    guard axWindows(pid)[cgWindowID] != nil else { return nil }
+                }
+            }
+
             let appName = info[kCGWindowOwnerName] as? String ?? ""
-            let runningApp = NSRunningApplication(processIdentifier: pid)
 
             return Window(
                 id: String(windowID),
@@ -60,10 +98,36 @@ public actor NativeClient: WindowServiceProtocol {
                 title: title,
                 space: 0,
                 pid: pid,
-                icon: runningApp?.icon,
-                bundleID: runningApp?.bundleIdentifier
+                icon: runningApp.icon,
+                bundleID: runningApp.bundleIdentifier
             )
         }
+    }
+
+    /// The space currently shown on each display.
+    private static func visibleSpaceIDs() -> Set<Int> {
+        let displays = CGSCopyManagedDisplaySpaces(CGS_CONNECTION) as? [[String: Any]] ?? []
+        return Set(displays.compactMap { ($0["Current Space"] as? [String: Any])?["ManagedSpaceID"] as? Int })
+    }
+
+    /// The windows an app reports through Accessibility (its real windows, minimized ones included),
+    /// keyed by window ID, with their titles ("" if the app reports none).
+    private static func axWindowTitles(pid: pid_t) -> [CGWindowID: String] {
+        let axApp = AXUIElementCreateApplication(pid)
+        // Don't let an unresponsive app stall the window query (AX default timeout is ~6s)
+        AXUIElementSetMessagingTimeout(axApp, 0.25)
+        var windowsRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &windowsRef) == .success,
+              let axWindows = windowsRef as? [AXUIElement] else { return [:] }
+        var titles: [CGWindowID: String] = [:]
+        for axWindow in axWindows {
+            var wid: CGWindowID = 0
+            guard _AXUIElementGetWindow(axWindow, &wid) == .success, wid != 0 else { continue }
+            var titleRef: CFTypeRef?
+            AXUIElementCopyAttributeValue(axWindow, kAXTitleAttribute as CFString, &titleRef)
+            titles[wid] = titleRef as? String ?? ""
+        }
+        return titles
     }
 
     public func focus(space: Int, windowId: String) async throws {

@@ -97,6 +97,16 @@ extension MenuBarHandler {
         return granted
     }
     
+    /// Asks for Screen Recording (needed for window titles and previews) and opens its System Settings page,
+    /// where it has to be switched on. macOS shows its own prompt only the first time an app requests it.
+    func requestScreenRecordingPermission() {
+        guard !CGPreflightScreenCaptureAccess() else { return }
+        _ = CGRequestScreenCaptureAccess()
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
     @objc func openSettings() {
         if let window = settingsWindow {
             window.collectionBehavior = [.moveToActiveSpace, .managed]

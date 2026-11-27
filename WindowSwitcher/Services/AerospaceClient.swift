@@ -77,7 +77,6 @@ public actor AerospaceClient: WindowServiceProtocol {
                 // Fall back to the app name so the view model's empty-title filter keeps them.
                 title: w.windowTitle.isEmpty ? w.appName : w.windowTitle,
                 // Workspaces can have arbitrary names; non-numeric ones map to -1.
-                // (0 is reserved for "not on any space", which disables previews.)
                 space: w.workspace.flatMap { Int($0) } ?? -1,
                 pid: w.appPid,
                 bundleID: w.appBundleId

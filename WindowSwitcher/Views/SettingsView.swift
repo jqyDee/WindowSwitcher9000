@@ -168,7 +168,7 @@ struct PrivacySettingsView: View {
                 LabeledContent("Screen Recording") {
                     PermissionButton(
                         isGranted: MenuBarHandler.shared.checkScreenRecordingPermission(),
-                        action: { _ = MenuBarHandler.shared.checkScreenRecordingPermission() }
+                        action: { MenuBarHandler.shared.requestScreenRecordingPermission() }
                     )
                 }
             }

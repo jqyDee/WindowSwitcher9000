@@ -19,8 +19,11 @@ public struct Window: Identifiable, Codable {
     public var icon: NSImage?
     public var cachedSnapshot: Snapshot?
     
+    /// "Open <app>" entries for apps that aren't running: not a real window, so nothing to focus or snapshot.
+    public var isLauncher: Bool { id.hasPrefix("launch:") }
+
     public var historyKey: String {
-        if id.starts(with: "launch:") {
+        if isLauncher {
             // For launchers, use the unique launch ID (which contains the bundleID)
             return id
         } else {

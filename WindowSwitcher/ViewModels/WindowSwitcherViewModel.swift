@@ -183,9 +183,10 @@ public final class WindowSwitcherViewModel: ObservableObject {
         guard isPreviewEnabled else { previewImage = nil; return }
         guard displayedWindows.indices.contains(selectedIndex) else { previewImage = nil; return }
 
-        // no snapshots for not even possibly visible windows
+        // no snapshots for launcher entries (apps that aren't running have no window).
+        // Not keyed on space: the native service reports space 0 for all real windows.
         let window = displayedWindows[selectedIndex]
-        if window.space == 0 {
+        if window.isLauncher {
             previewImage = nil
             return
         }
@@ -244,7 +245,7 @@ public final class WindowSwitcherViewModel: ObservableObject {
         history[key, default: 0] += 1
         selectionHistory = history
         
-        if window.pid == 0 || window.id.starts(with: "launch:"){
+        if window.pid == 0 || window.isLauncher {
             if let bid = window.bundleID {
                 AppLauncher.openByBundleID(bid)
             } else {

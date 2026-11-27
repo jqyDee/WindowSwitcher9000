@@ -37,6 +37,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         ]
         let granted = AXIsProcessTrustedWithOptions(options)
         print("Accessibility permission granted: \(granted)")
+
+        // Screen Recording is needed for window titles (native service) and previews.
+        // Requesting it registers the app in System Settings (and prompts the first time only).
+        if !CGPreflightScreenCaptureAccess() {
+            _ = CGRequestScreenCaptureAccess()
+        }
         
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
             if granted {
