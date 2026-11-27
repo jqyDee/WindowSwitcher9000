@@ -17,18 +17,29 @@ final class OnboardingHandler {
 
     private init() {}
 
+    private var hasCompleted: Bool { UserDefaults.standard.bool(forKey: Self.completedKey) }
+
     var shouldShowOnLaunch: Bool {
-        !UserDefaults.standard.bool(forKey: Self.completedKey) || !AXIsProcessTrusted()
+        !hasCompleted || !AXIsProcessTrusted()
     }
 
-    func show() {
+    /// At launch: the full setup the first time; afterwards only the Accessibility step, when that
+    /// permission went missing.
+    func showOnLaunch() {
+        show(accessibilityOnly: hasCompleted)
+    }
+
+    func show(accessibilityOnly: Bool = false) {
         if let window {
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
         }
 
-        let hostingController = NSHostingController(rootView: OnboardingView(onDone: { [weak self] in self?.complete() }))
+        let hostingController = NSHostingController(rootView: OnboardingView(
+            accessibilityOnly: accessibilityOnly,
+            onDone: { [weak self] in self?.complete() }
+        ))
         let window = NSWindow(contentViewController: hostingController)
         window.styleMask = [.titled, .closable, .fullSizeContentView]
         window.titlebarAppearsTransparent = true

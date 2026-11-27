@@ -159,6 +159,10 @@ struct AppearanceSettingsView: View {
             
             Section("Preview") {
                 Toggle("Enable Preview", isOn: $previewEnabled)
+                    .onChange(of: previewEnabled) { _, enabled in
+                        // previews need Screen Recording: ask when they are turned on, not at the first capture
+                        if enabled { MenuBarHandler.shared.requestScreenRecordingPermission() }
+                    }
                 
                 LabeledContent("Ratio") {
                     HStack {

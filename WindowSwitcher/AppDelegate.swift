@@ -35,7 +35,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
         // The setup window asks for permissions (first launch, or whenever Accessibility is missing)
         if OnboardingHandler.shared.shouldShowOnLaunch {
-            OnboardingHandler.shared.show()
+            OnboardingHandler.shared.showOnLaunch()
         }
         
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
