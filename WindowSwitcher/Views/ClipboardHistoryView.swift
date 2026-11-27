@@ -99,10 +99,16 @@ struct ClipboardHistoryView: View {
                 .foregroundStyle(.secondary)
         case .image:
             if let thumbnail = clipboard.thumbnail(for: item) {
+                // size first, then crop: a frame alone doesn't clip, so a filled image spills over the row
                 Image(nsImage: thumbnail)
                     .resizable()
                     .scaledToFill()
+                    .frame(width: 32, height: 32)
                     .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .strokeBorder(Color.primary.opacity(0.15))
+                    )
             } else {
                 Image(systemName: "photo").font(.system(size: 18)).foregroundStyle(.secondary)
             }
