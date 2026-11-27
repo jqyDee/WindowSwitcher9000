@@ -17,7 +17,7 @@ public final class CalculatorViewModel: ObservableObject {
 
     private static let historyKey = "CalculationHistory"
     private static let historyLimitKey = "CalculationHistoryLimit"
-    public static let defaultHistoryLimit = 200
+    public static let defaultHistoryLimit = 50
     public static let historyLimitRange = 10...1000
 
     /// Newest first.

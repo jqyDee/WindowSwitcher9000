@@ -17,7 +17,7 @@ public final class ClipboardViewModel: ObservableObject {
     public static let shared = ClipboardViewModel()
 
     private static let historyLimitKey = "ClipboardHistoryLimit"
-    public static let defaultHistoryLimit = 200
+    public static let defaultHistoryLimit = 30
     public static let historyLimitRange = 10...1000
     /// How often the clipboard is checked: macOS has no change notification, only a change counter.
     private static let pollInterval: TimeInterval = 0.5
