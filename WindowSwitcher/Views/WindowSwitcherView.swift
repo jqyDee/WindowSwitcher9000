@@ -62,7 +62,9 @@ struct WindowSwitcherView: View {
         // disturbs the glass rendering, which stayed washed out after the menu closed.
         .overlay(alignment: .bottomTrailing) { actionMenu }
         .foregroundStyle(.primary)
-        .padding(12) // room for the glass edge highlights and shadow
+        // Room for the glass edge highlights and shadow. The window ends here, so with less room the
+        // shadow is cut off at the window's edge and shows as a faint gray box around the panel.
+        .padding(40)
         .onAppear {
             visibleTo = visibleLines - 1
         }
