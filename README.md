@@ -88,6 +88,15 @@ the right of the search bar. `RETURN` saves the calculation and copies the resul
 
 The size of the history can be capped, and the history cleared, in `Settings -> Calculator`.
 
+# Clipboard History
+Everything you copy (text, images and files) is kept in a history. Type `#` to open it: the list shows your copies newest first, the
+preview shows the full text, the image or the files. Type to search, `RETURN` puts the selected entry back on the clipboard and closes
+the panel, so `CMD + V` pastes it where you were. `CMD + BACKSPACE` deletes an entry, `ESC` clears the search and then leaves.
+
+Copying something that is already in the history moves it to the top instead of adding it twice. Content that password managers mark
+as concealed is never saved. The history stays on your Mac (`~/Library/Application Support/WindowSwitcher9000/Clipboard`); its size
+and a Clear button are in `Settings -> Clipboard`.
+
 # Actions
 `CMD + K` opens the action menu, Raycast-style: it lists everything you can do with the current selection together with its key.
 Type to filter it, pick an action with the arrow keys and run it with `RETURN`. It also has the app toggles of the Menu Bar menu

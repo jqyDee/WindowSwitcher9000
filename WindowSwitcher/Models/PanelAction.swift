@@ -31,7 +31,9 @@ public enum KeyChord: Hashable {
 public struct PanelAction: Identifiable, Equatable {
     public enum Kind: Hashable {
         case switchToWindow, openApp
-        case enterMathMode, calculate, insertEntry, copyResult, deleteEntry, leaveMathMode
+        case enterMathMode, calculate, insertEntry, copyResult
+        case enterClipboardMode, copyClip
+        case deleteEntry, leaveMode
         case clearInput, settings, closePanel
         case toggleDockIcon, toggleDebugMode, quit
     }

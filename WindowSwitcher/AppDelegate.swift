@@ -48,6 +48,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         
         _ = MenuBarHandler.shared
         _ = FloatingPanelHandler.shared
+        ClipboardViewModel.shared.startMonitoring()
     }
     
     func applicationWillTerminate(_ notification: Notification) {

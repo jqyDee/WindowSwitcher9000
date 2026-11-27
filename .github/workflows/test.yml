@@ -4,15 +4,15 @@ on:
   push:
     branches: [main]
     paths:
-      - 'Packages/Calculator/**'
+      - 'Packages/**'
       - '.github/workflows/test.yml'
   pull_request:
     paths:
-      - 'Packages/Calculator/**'
+      - 'Packages/**'
       - '.github/workflows/test.yml'
 
 jobs:
-  calculator:
+  packages:
     runs-on: macos-26
     steps:
       - name: Checkout code
@@ -23,6 +23,10 @@ jobs:
         with:
           xcode-version: 'latest-stable'
 
-      - name: Test calculator
-        working-directory: Packages/Calculator
-        run: swift test
+      - name: Test packages
+        run: |
+          for package in Packages/*/; do
+            echo "::group::swift test $package"
+            (cd "$package" && swift test) || exit 1
+            echo "::endgroup::"
+          done

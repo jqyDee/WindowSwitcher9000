@@ -13,6 +13,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     case general = "General"
     case appearance = "Appearance"
     case calculator = "Calculator"
+    case clipboard = "Clipboard"
     case privacy = "Privacy"
     case advanced = "Advanced"
     
@@ -24,6 +25,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .general: return "gearshape"
         case .appearance: return "paintpalette"
         case .calculator: return "function"
+        case .clipboard: return "doc.on.clipboard"
         case .privacy: return "hand.raised"
         case .advanced: return "hammer"
         }
@@ -61,6 +63,7 @@ struct SettingsView: View {
                 case .general: GeneralSettingsView()
                 case .appearance: AppearanceSettingsView()
                 case .calculator: CalculatorSettingsView()
+                case .clipboard: ClipboardSettingsView()
                 case .privacy: PrivacySettingsView()
                 case .advanced: AdvancedSettingsView()
                 case .none: Text("Select a category")
@@ -204,6 +207,47 @@ struct CalculatorSettingsView: View {
             isPresented: $isConfirmingClear
         ) {
             Button("Clear History", role: .destructive) { calculator.clearHistory() }
+        }
+    }
+}
+
+struct ClipboardSettingsView: View {
+    @ObservedObject private var clipboard = ClipboardViewModel.shared
+    @State private var isConfirmingClear = false
+
+    var body: some View {
+        Form {
+            Section {
+                LabeledContent("Keep Last") {
+                    Stepper(
+                        "\(clipboard.historyLimit) entries",
+                        value: $clipboard.historyLimit,
+                        in: ClipboardViewModel.historyLimitRange,
+                        step: 10
+                    )
+                    .monospacedDigit()
+                }
+                LabeledContent("Saved") {
+                    Text("\(clipboard.items.count)").monospacedDigit()
+                }
+                LabeledContent("Clear History") {
+                    Button("Clear…", role: .destructive) { isConfirmingClear = true }
+                        .disabled(clipboard.items.isEmpty)
+                }
+            } header: {
+                Text("History")
+            } footer: {
+                Text("Text, images and files you copy are kept on this Mac only. Lowering the limit deletes the oldest entries beyond it. Content that password managers mark as concealed is never saved.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .confirmationDialog(
+            "Delete all \(clipboard.items.count) saved clipboard entries?",
+            isPresented: $isConfirmingClear
+        ) {
+            Button("Clear History", role: .destructive) { clipboard.clearHistory() }
         }
     }
 }

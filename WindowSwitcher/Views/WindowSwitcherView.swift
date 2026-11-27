@@ -74,13 +74,23 @@ struct WindowSwitcherView: View {
     var resultsCard: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                if vm.isMathMode {
+                switch vm.mode {
+                case .math:
                     CalculatorHistoryView(
                         calculator: vm.calculator,
                         cornerRadius: cardCornerRadius - listPadding,
                         padding: listPadding
                     )
-                } else {
+                case .clipboard:
+                    ClipboardHistoryView(
+                        clipboard: vm.clipboard,
+                        query: vm.filterText,
+                        listWidth: listWidth,
+                        previewWidth: vm.isPreviewEnabled ? previewWidth : nil,
+                        cornerRadius: cardCornerRadius - listPadding,
+                        padding: listPadding
+                    )
+                case .windows:
                     windowList
                         .frame(width: listWidth)
 
@@ -117,12 +127,24 @@ struct WindowSwitcherView: View {
     }
 
     private var inputPlaceholder: String {
-        vm.isMathMode ? "Calculate ..." : "Find the Program in your mess ..."
+        switch vm.mode {
+        case .windows: return "Find the Program in your mess ..."
+        case .math: return "Calculate ..."
+        case .clipboard: return "Search clipboard ..."
+        }
+    }
+
+    private var modeIcon: String {
+        switch vm.mode {
+        case .windows: return "magnifyingglass"
+        case .math: return "function"
+        case .clipboard: return "doc.on.clipboard"
+        }
     }
 
     var searchBar: some View {
         HStack(spacing: 12) {
-            Image(systemName: vm.isMathMode ? "function" : "magnifyingglass")
+            Image(systemName: modeIcon)
                 .frame(width: 24)
                 .font(.system(size: 20, weight: .medium))
                 .foregroundStyle(.secondary)

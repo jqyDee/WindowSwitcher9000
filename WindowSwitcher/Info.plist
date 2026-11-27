@@ -6,6 +6,16 @@
     <string>$(MARKETING_VERSION)</string>
     <key>CFBundleVersion</key>
     <string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>WindowSwitcher needs to read files you copied from your Desktop to put them back on the clipboard.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>WindowSwitcher needs to read files you copied from Documents to put them back on the clipboard.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>WindowSwitcher needs to read files you copied from Downloads to put them back on the clipboard.</string>
+	<key>NSRemovableVolumesUsageDescription</key>
+	<string>WindowSwitcher needs to read files you copied from external drives to put them back on the clipboard.</string>
+	<key>NSNetworkVolumesUsageDescription</key>
+	<string>WindowSwitcher needs to read files you copied from network drives to put them back on the clipboard.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict/>

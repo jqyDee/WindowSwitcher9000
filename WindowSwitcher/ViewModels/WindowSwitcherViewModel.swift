@@ -7,14 +7,34 @@
 
 import Foundation
 import AppKit
+import ClipboardHistory
 import Combine
 import SwiftUI
 
-/// What the panel does with the current input.
+/// Which list the panel shows. Entered by typing the mode's prefix into an empty search, left with Esc.
+public enum PanelMode: Equatable {
+    case windows
+    /// `$`: the calculator and its history.
+    case math
+    /// `#`: the clipboard history.
+    case clipboard
+
+    init?(prefix: Character) {
+        switch prefix {
+        case "$": self = .math
+        case "#": self = .clipboard
+        default: return nil
+        }
+    }
+}
+
+/// What the panel does with the current input: the mode, with the input in its meaning there.
 public enum InputMode: Equatable {
     case windows
-    /// Math mode, entered by typing `$`; the whole input is the expression.
+    /// The whole input is the expression.
     case math(expression: String)
+    /// The input searches the clipboard history.
+    case clipboard(query: String)
 }
 
 @MainActor
@@ -33,15 +53,14 @@ public final class WindowSwitcherViewModel: ObservableObject {
     
     @Published public var filterText: String = "" {
         didSet {
-            // `$` only switches the mode; it never stays in the field
-            if !isMathMode, filterText.hasPrefix("$") {
-                isMathMode = true
+            // a mode's prefix only switches the mode; it never stays in the field
+            if mode == .windows, let first = filterText.first, let entered = PanelMode(prefix: first) {
+                mode = entered
                 filterText = String(filterText.dropFirst())
             }
         }
     }
-    /// Entered by typing `$`; left with Esc on an empty field.
-    @Published public private(set) var isMathMode = false
+    @Published public private(set) var mode: PanelMode = .windows
 
     /// The ⌘K action menu. While it is open the search field edits `actionFilter` instead of `filterText`.
     @Published public internal(set) var isActionMenuOpen = false
@@ -61,10 +80,20 @@ public final class WindowSwitcherViewModel: ObservableObject {
     @Published public var footerCommands: String? = nil
     @Published public var cachedLaunchableApps: [LaunchableApp] = []
     public let calculator = CalculatorViewModel.shared
+    public let clipboard = ClipboardViewModel.shared
 
     public var inputMode: InputMode {
-        if isMathMode { return .math(expression: filterText) }
-        return .windows
+        switch mode {
+        case .windows: return .windows
+        case .math: return .math(expression: filterText)
+        case .clipboard: return .clipboard(query: filterText)
+        }
+    }
+
+    /// The clipboard entries matching the search, and the selected one.
+    public var displayedClips: [ClipItem] { clipboard.filteredItems(matching: filterText) }
+    public var selectedClip: ClipItem? {
+        mode == .clipboard ? displayedClips[safe: clipboard.selectedIndex] : nil
     }
     
     // MARK: - Dependencies
@@ -108,12 +137,15 @@ public final class WindowSwitcherViewModel: ObservableObject {
             .sink { [weak self] _ in
                 guard let self else { return }
                 Task {
-                    if case .math = self.inputMode {
+                    switch self.mode {
+                    case .math:
                         self.calculator.selectedIndex = nil
-                        return
+                    case .clipboard:
+                        self.clipboard.selectedIndex = 0
+                    case .windows:
+                        self.recomputeDisplay()
+                        self.selectedIndex = 0
                     }
-                    self.recomputeDisplay()
-                    self.selectedIndex = 0
                 }
             }
             .store(in: &cancellables)
@@ -199,14 +231,16 @@ public final class WindowSwitcherViewModel: ObservableObject {
 
     public func moveSelectionForward() {
         if isActionMenuOpen { return moveActionSelection(by: 1) }
-        if case .math = inputMode { return calculator.moveSelectionForward() }
+        if mode == .math { return calculator.moveSelectionForward() }
+        if mode == .clipboard { return clipboard.moveSelection(by: 1, count: displayedClips.count) }
         guard !displayedWindows.isEmpty else { return }
         selectedIndex = (selectedIndex + 1) % displayedWindows.count
     }
 
     public func moveSelectionBackward() {
         if isActionMenuOpen { return moveActionSelection(by: -1) }
-        if case .math = inputMode { return calculator.moveSelectionBackward() }
+        if mode == .math { return calculator.moveSelectionBackward() }
+        if mode == .clipboard { return clipboard.moveSelection(by: -1, count: displayedClips.count) }
         guard !displayedWindows.isEmpty else { return }
         selectedIndex = (selectedIndex - 1 + displayedWindows.count) % displayedWindows.count
     }
@@ -270,6 +304,16 @@ public final class WindowSwitcherViewModel: ObservableObject {
         case .math(let expression):
             apply(calculator.submit(expression))
             return
+        case .clipboard:
+            // copy, and close so ⌘V lands in the app the panel was opened from
+            guard let item = selectedClip else { return }
+            if let error = clipboard.copy(item) {
+                footerCommands = error
+                return
+            }
+            exitMode()
+            FloatingPanelHandler.shared.closePanel()
+            return
         case .windows:
             break
         }
@@ -302,8 +346,8 @@ public final class WindowSwitcherViewModel: ObservableObject {
             closeActionMenu()
         } else if !filterText.isEmpty {
             filterText = ""
-        } else if isMathMode {
-            exitMathMode()
+        } else if mode != .windows {
+            exitMode()
         } else {
             FloatingPanelHandler.shared.closePanel()
         }
@@ -316,10 +360,10 @@ public final class WindowSwitcherViewModel: ObservableObject {
 
     // MARK: - Private Helpers
 
-    /// Leaves math mode, discarding the expression being typed.
-    func exitMathMode() {
+    /// Back to window switching, discarding the input.
+    func exitMode() {
         filterText = ""
-        isMathMode = false
+        mode = .windows
         footerCommands = nil
         recomputeDisplay()
         selectedIndex = 0

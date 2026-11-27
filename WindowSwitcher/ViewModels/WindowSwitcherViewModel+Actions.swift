@@ -20,6 +20,7 @@ extension WindowSwitcherViewModel {
                     : PanelAction(.switchToWindow, "Switch to Window", icon: "macwindow", chord: .enter))
             }
             actions.append(PanelAction(.enterMathMode, "Calculator", icon: "function", keyLabel: "$"))
+            actions.append(PanelAction(.enterClipboardMode, "Clipboard History", icon: "doc.on.clipboard", keyLabel: "#"))
         case .math(let expression):
             if calculator.selectedIndex == nil {
                 if !expression.trimmed.isEmpty {
@@ -30,15 +31,21 @@ extension WindowSwitcherViewModel {
                 actions.append(PanelAction(.copyResult, "Copy Result", icon: "doc.on.clipboard", chord: .commandEnter))
                 actions.append(PanelAction(.deleteEntry, "Delete Entry", icon: "trash", chord: .commandBackspace))
             }
+        case .clipboard:
+            if selectedClip != nil {
+                actions.append(PanelAction(.copyClip, "Copy to Clipboard", icon: "doc.on.clipboard", chord: .enter))
+                actions.append(PanelAction(.deleteEntry, "Delete Entry", icon: "trash", chord: .commandBackspace))
+            }
         }
         actions.append(PanelAction(.settings, "Settings", icon: "gearshape", chord: .commandComma))
         // Esc (see handleEscape) steps back: it clears the input first, then on an empty field
-        // leaves math mode, or closes the panel (which ⇧Esc below does as well).
+        // leaves the mode, or closes the panel (which ⇧Esc below does as well).
         if !filterText.isEmpty {
-            actions.append(PanelAction(.clearInput, isMathMode ? "Clear Input" : "Clear Search",
+            actions.append(PanelAction(.clearInput, mode == .math ? "Clear Input" : "Clear Search",
                                        icon: "delete.left", keyLabel: "Esc"))
-        } else if isMathMode {
-            actions.append(PanelAction(.leaveMathMode, "Leave Calculator", icon: "magnifyingglass", keyLabel: "Esc"))
+        } else if mode != .windows {
+            actions.append(PanelAction(.leaveMode, mode == .math ? "Leave Calculator" : "Leave Clipboard History",
+                                       icon: "magnifyingglass", keyLabel: "Esc"))
         }
         // closes at once and keeps the input (and math mode) for the next time the panel opens
         actions.append(PanelAction(.closePanel, "Close", icon: "xmark", chord: .shiftEscape))
@@ -89,18 +96,20 @@ extension WindowSwitcherViewModel {
     public func perform(_ action: PanelAction) {
         closeActionMenu()
         switch action.kind {
-        case .switchToWindow, .openApp, .calculate, .insertEntry:
+        case .switchToWindow, .openApp, .calculate, .insertEntry, .copyClip:
             handleEnter()
         case .copyResult:
             if case .math(let expression) = inputMode { apply(calculator.copyResult(expression)) }
         case .deleteEntry:
-            calculator.removeSelectedEntry()
+            deleteSelectedEntry()
         case .enterMathMode:
             filterText = "$"
+        case .enterClipboardMode:
+            filterText = "#"
         case .clearInput:
             filterText = ""
-        case .leaveMathMode:
-            exitMathMode()
+        case .leaveMode:
+            exitMode()
         case .settings:
             FloatingPanelHandler.shared.closePanel()
             MenuBarHandler.shared.openSettings()
@@ -112,6 +121,20 @@ extension WindowSwitcherViewModel {
             MenuBarHandler.shared.toggleDebugMode()
         case .quit:
             MenuBarHandler.shared.quit()
+        }
+    }
+
+    /// ⌘⌫ in the calculator or clipboard history; the selection stays at the same position.
+    private func deleteSelectedEntry() {
+        switch mode {
+        case .math:
+            calculator.removeSelectedEntry()
+        case .clipboard:
+            guard let item = selectedClip else { return }
+            clipboard.remove(item)
+            clipboard.selectedIndex = min(clipboard.selectedIndex, max(displayedClips.count - 1, 0))
+        case .windows:
+            break
         }
     }
 

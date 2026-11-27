@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		0916AAE82E6E37470000B7B3 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 0916AAE72E6E37470000B7B3 /* KeyboardShortcuts */; };
 		0916AAF02E6E37470000B7B3 /* Calculator in Frameworks */ = {isa = PBXBuildFile; productRef = 0916AAF12E6E37470000B7B3 /* Calculator */; };
+		0916AAF32E6E37470000B7B3 /* ClipboardHistory in Frameworks */ = {isa = PBXBuildFile; productRef = 0916AAF42E6E37470000B7B3 /* ClipboardHistory */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -48,6 +49,7 @@
 			files = (
 				0916AAE82E6E37470000B7B3 /* KeyboardShortcuts in Frameworks */,
 				0916AAF02E6E37470000B7B3 /* Calculator in Frameworks */,
+				0916AAF32E6E37470000B7B3 /* ClipboardHistory in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -94,6 +96,7 @@
 			packageProductDependencies = (
 				0916AAE72E6E37470000B7B3 /* KeyboardShortcuts */,
 				0916AAF12E6E37470000B7B3 /* Calculator */,
+				0916AAF42E6E37470000B7B3 /* ClipboardHistory */,
 			);
 			productName = WindowSwitcher;
 			productReference = 09983F922E66F7E300C65495 /* WindowSwitcher.app */;
@@ -126,6 +129,7 @@
 			packageReferences = (
 				0916AAE62E6E37470000B7B3 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
 				0916AAF22E6E37470000B7B3 /* XCLocalSwiftPackageReference "Packages/Calculator" */,
+				0916AAF52E6E37470000B7B3 /* XCLocalSwiftPackageReference "Packages/ClipboardHistory" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 09983F932E66F7E300C65495 /* Products */;
@@ -378,6 +382,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/Calculator;
 		};
+		0916AAF52E6E37470000B7B3 /* XCLocalSwiftPackageReference "Packages/ClipboardHistory" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/ClipboardHistory;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -400,6 +408,10 @@
 		0916AAF12E6E37470000B7B3 /* Calculator */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Calculator;
+		};
+		0916AAF42E6E37470000B7B3 /* ClipboardHistory */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ClipboardHistory;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
