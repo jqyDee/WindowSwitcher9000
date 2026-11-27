@@ -30,9 +30,10 @@ public enum KeyChord: Hashable {
 
 public struct PanelAction: Identifiable, Equatable {
     public enum Kind: Hashable {
-        case switchToWindow, openApp, runCommand
+        case switchToWindow, openApp
         case enterMathMode, calculate, insertEntry, copyResult, deleteEntry, leaveMathMode
         case clearInput, settings, closePanel
+        case toggleDockIcon, toggleDebugMode, quit
     }
 
     public let kind: Kind
@@ -40,7 +41,8 @@ public struct PanelAction: Identifiable, Equatable {
     public let icon: String
     /// The chord that runs it from the search field, if it has one.
     public let chord: KeyChord?
-    /// Shown in the menu: the chord's symbol, or how the action is reached otherwise (e.g. typing `$`).
+    /// Shown in the menu: the chord's symbol, or how the action is reached otherwise (e.g. typing `$`);
+    /// empty when it has no key.
     public let keyLabel: String
 
     public var id: Kind { kind }

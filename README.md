@@ -74,12 +74,24 @@ with `Open <application name>`.
 To move the selection up the list use `<SHIFT + TAB | ARROW_UP>`. To move it down use `<TAB | ARROW_DOWN>`. To focus the selected window
 press `RETURN`!
 
-# Commands
-There is a small set of commands available. They are basically providing similar functionality as the Menu Bar menu. To look up the commands
-type `/help/` in the filter and press enter. The output of each command will be displayed in the footer of the panel. 
+`ESC` clears the filter, and closes the panel when the filter is empty. `SHIFT + ESC` closes the panel right away and keeps the filter
+for the next time you open it.
 
-*This is basically so there is a way to unhide the Menu Bar Item again to change some settings. The command set is really unfinished but should
-get you out of the sticky situation where you disabled the Menu Bar Item and are wondering how to get it back ;).*
+# Calculator
+Type `$` to switch to the calculator: the window list is replaced by your past calculations and the result of what you type is shown on
+the right of the search bar. `RETURN` saves the calculation and copies the result to the clipboard.
+
+- Operators `+ - * / ^ %` and parentheses, implicit multiplication like `2pi` or `3(4+1)`. Only `.` is a decimal separator.
+- Functions `sqrt abs ln log round floor ceil` and `sin cos tan asin acos atan` (in degrees), constants `pi`, `e` and `ans` (the last result).
+- Select a past calculation with the arrow keys: `RETURN` puts it into the field, `CMD + RETURN` copies its result, `CMD + BACKSPACE` deletes it.
+- `ESC` clears the field, and leaves the calculator when the field is empty.
+
+The size of the history can be capped, and the history cleared, in `Settings -> Calculator`.
+
+# Actions
+`CMD + K` opens the action menu, Raycast-style: it lists everything you can do with the current selection together with its key.
+Type to filter it, pick an action with the arrow keys and run it with `RETURN`. It also has the app toggles of the Menu Bar menu
+(dock icon, debug mode) and Quit.
 
 # Footer
 *I want to make it clear that this has been my first experience writing in Swift and SwiftUI. This is my first MacOS specific

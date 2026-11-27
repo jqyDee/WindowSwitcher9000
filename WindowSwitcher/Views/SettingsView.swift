@@ -91,7 +91,8 @@ struct GeneralSettingsView: View {
             Section("System") {
                 Toggle("Hide Dock Icon", isOn: $isDockHidden)
                     .onChange(of: isDockHidden) { _, newValue in
-                        MenuBarHandler.shared.toggleDockIconProgrammatically()
+                        // apply the value the toggle just stored (toggling here would undo it)
+                        MenuBarHandler.shared.setDockHidden(newValue)
                     }
                 Toggle("Enable Notifications", isOn: $enableNotifications)
                 LabeledContent("Window Service") {

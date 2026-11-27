@@ -31,7 +31,8 @@ class MenuBarHandler {
     init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         setupMenuBar()
-        showBarIcon()
+        // always shown: it is the way to Settings (also restores it for anyone who hid it before)
+        statusItem.isVisible = true
         startMemoryMonitoring()
     }
 }
@@ -39,17 +40,14 @@ class MenuBarHandler {
 // MARK: - Public API
 
 extension MenuBarHandler {
-    @objc func showBarIcon() {
-        statusItem.isVisible = true
-    }
-    
-    @objc func hideBarIcon() {
-        statusItem.isVisible = false
-    }
-    
     func toggleDockIconProgrammatically() {
-        isDockHidden.toggle()
-        
+        setDockHidden(!isDockHidden)
+    }
+
+    /// Stores the setting and applies it; calling it with the current value changes nothing.
+    func setDockHidden(_ hidden: Bool) {
+        if isDockHidden != hidden { isDockHidden = hidden }
+
         if isDockHidden {
             NSApp.setActivationPolicy(.accessory)
         } else {

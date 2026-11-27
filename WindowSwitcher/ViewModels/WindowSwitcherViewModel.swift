@@ -13,7 +13,6 @@ import SwiftUI
 /// What the panel does with the current input.
 public enum InputMode: Equatable {
     case windows
-    case command(Command)
     /// Math mode, entered by typing `$`; the whole input is the expression.
     case math(expression: String)
 }
@@ -65,7 +64,6 @@ public final class WindowSwitcherViewModel: ObservableObject {
 
     public var inputMode: InputMode {
         if isMathMode { return .math(expression: filterText) }
-        if let command = CommandHandler.extractCommand(from: filterText) { return .command(command) }
         return .windows
     }
     
@@ -269,9 +267,6 @@ public final class WindowSwitcherViewModel: ObservableObject {
 
     public func handleEnter() {
         switch inputMode {
-        case .command(let cmd):
-            footerCommands = CommandHandler.handle(cmd)
-            return
         case .math(let expression):
             apply(calculator.submit(expression))
             return

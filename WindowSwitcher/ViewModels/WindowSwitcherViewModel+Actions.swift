@@ -20,8 +20,6 @@ extension WindowSwitcherViewModel {
                     : PanelAction(.switchToWindow, "Switch to Window", icon: "macwindow", chord: .enter))
             }
             actions.append(PanelAction(.enterMathMode, "Calculator", icon: "function", keyLabel: "$"))
-        case .command:
-            actions.append(PanelAction(.runCommand, "Run Command", icon: "terminal", chord: .enter))
         case .math(let expression):
             if calculator.selectedIndex == nil {
                 if !expression.trimmed.isEmpty {
@@ -44,6 +42,14 @@ extension WindowSwitcherViewModel {
         }
         // closes at once and keeps the input (and math mode) for the next time the panel opens
         actions.append(PanelAction(.closePanel, "Close", icon: "xmark", chord: .shiftEscape))
+
+        // App toggles (formerly the /commands/), titled by what they will do now.
+        actions.append(PanelAction(.toggleDockIcon,
+                                   MenuBarHandler.shared.isDockHidden ? "Show Dock Icon" : "Hide Dock Icon",
+                                   icon: "dock.rectangle", keyLabel: ""))
+        actions.append(PanelAction(.toggleDebugMode, isDebugMode ? "Disable Debug Mode" : "Enable Debug Mode",
+                                   icon: "ladybug", keyLabel: ""))
+        actions.append(PanelAction(.quit, "Quit WindowSwitcher", icon: "power", keyLabel: ""))
         return actions
     }
 
@@ -83,7 +89,7 @@ extension WindowSwitcherViewModel {
     public func perform(_ action: PanelAction) {
         closeActionMenu()
         switch action.kind {
-        case .switchToWindow, .openApp, .runCommand, .calculate, .insertEntry:
+        case .switchToWindow, .openApp, .calculate, .insertEntry:
             handleEnter()
         case .copyResult:
             if case .math(let expression) = inputMode { apply(calculator.copyResult(expression)) }
@@ -100,6 +106,12 @@ extension WindowSwitcherViewModel {
             MenuBarHandler.shared.openSettings()
         case .closePanel:
             FloatingPanelHandler.shared.closePanel()
+        case .toggleDockIcon:
+            MenuBarHandler.shared.toggleDockIconProgrammatically()
+        case .toggleDebugMode:
+            MenuBarHandler.shared.toggleDebugMode()
+        case .quit:
+            MenuBarHandler.shared.quit()
         }
     }
 

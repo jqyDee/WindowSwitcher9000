@@ -14,6 +14,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     private var appearanceObserver: NSKeyValueObservation?
 
     func applicationWillFinishLaunching(_ notification: Notification) {
+        // The dock icon is hidden unless the user turned it on; without this, a fresh install read `false`.
+        UserDefaults.standard.register(defaults: ["DockHidden": true])
         if UserDefaults.standard.bool(forKey: "DockHidden") {
             NSApp.setActivationPolicy(.accessory)
         } else {
