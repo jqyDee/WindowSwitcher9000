@@ -107,9 +107,13 @@ extension MenuBarHandler {
 
         let rootView = SettingsView()
         let hostingController = NSHostingController(rootView: rootView)
+        // Let SwiftUI drive the window's toolbar and title (navigationTitle of the selected category)
+        hostingController.sceneBridgingOptions = [.toolbars, .title]
         
         let window = NSWindow(contentViewController: hostingController)
-        window.styleMask = [.titled, .closable, .miniaturizable]
+        // fullSizeContentView lets the sidebar float as a glass panel under the toolbar (macOS 26+ look)
+        window.styleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
+        window.toolbarStyle = .unified
         window.title = "WindowSwitcher Settings"
         window.isReleasedWhenClosed = false
         
@@ -118,10 +122,6 @@ extension MenuBarHandler {
         let windowWidth: CGFloat = 700
         let windowHeight: CGFloat = 450
         window.setContentSize(NSSize(width: windowWidth, height: windowHeight))
-        
-        // 2. Modern Look
-        window.titlebarAppearsTransparent = true
-        window.titleVisibility = .hidden
         
         // 3. Collection Behavior
         window.collectionBehavior = [.moveToActiveSpace, .managed]

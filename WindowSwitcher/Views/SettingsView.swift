@@ -35,22 +35,23 @@ struct SettingsView: View {
         NavigationSplitView {
             // Using the view builder version of List to allow for Dividers
             List(selection: $selectedCategory) {
-                // 1. Static entry for About
-                NavigationLink(value: SettingsCategory.about) {
-                    Label(SettingsCategory.about.rawValue, systemImage: SettingsCategory.about.icon)
+                Section {
+                    NavigationLink(value: SettingsCategory.about) {
+                        Label(SettingsCategory.about.rawValue, systemImage: SettingsCategory.about.icon)
+                    }
                 }
-                
-                // 2. The Separator
-                Divider()
-                
-                // 3. Dynamic entries for the rest
-                ForEach(SettingsCategory.allCases.filter { $0 != .about }) { category in
-                    NavigationLink(value: category) {
-                        Label(category.rawValue, systemImage: category.icon)
+
+                Section {
+                    ForEach(SettingsCategory.allCases.filter { $0 != .about }) { category in
+                        NavigationLink(value: category) {
+                            Label(category.rawValue, systemImage: category.icon)
+                        }
                     }
                 }
             }
-            .navigationSplitViewColumnWidth(min: 160, ideal: 160, max: 160)
+            .navigationSplitViewColumnWidth(min: 180, ideal: 180, max: 180)
+            // Settings windows (like System Settings) keep the sidebar fixed
+            .toolbar(removing: .sidebarToggle)
         } detail: {
             Group {
                 switch selectedCategory {

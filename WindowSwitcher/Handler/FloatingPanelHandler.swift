@@ -175,19 +175,11 @@ extension FloatingPanelHandler {
             didClose: { /* handled manually */ }
         )
         
+        // Fully transparent window: the SwiftUI Liquid Glass shapes draw the visible panel and its shadow.
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        style(panel)
+        panel.hasShadow = false
         return panel
-    }
-    
-    private func style(_ panel: NSPanel) {
-        guard let contentView = panel.contentView else { return }
-        contentView.wantsLayer = true
-        contentView.layer?.cornerRadius = 10
-        contentView.layer?.borderWidth = 0.4
-        contentView.layer?.borderColor = CGColor(gray: 0.7, alpha: 0.8)
-        contentView.layer?.masksToBounds = false
     }
     
     @MainActor

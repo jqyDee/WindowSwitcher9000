@@ -17,7 +17,12 @@ struct WindowSwitcherView: View {
     private var panelWidth: CGFloat { CGFloat(vm.panelWidth) }
     private var panelHeight: CGFloat { CGFloat(vm.panelHeight) }
     private var previewRatio: CGFloat { CGFloat(vm.previewWidthPercentage) }
-    private let headerHeight: CGFloat = 78
+    private let searchBarHeight: CGFloat = 56
+    private let footerHeight: CGFloat = 30
+    private let listPadding: CGFloat = 8
+    private let cardCornerRadius: CGFloat = 26
+    /// Liquid Glass tinted darker than the system default; raise the opacity for darker glass.
+    private let glass: Glass = .regular.tint(.black.opacity(0.35))
     private let rowHeight: CGFloat = WindowRowView.height
     
     private var previewWidth: CGFloat {
@@ -30,20 +35,44 @@ struct WindowSwitcherView: View {
     
     // Calculate visible lines based on the panel height
     private var visibleLines: Int {
-        let availableHeight = CGFloat(vm.panelHeight) - headerHeight
+        let availableHeight = panelHeight - footerHeight - listPadding * 2
         return Int(floor(availableHeight / rowHeight))
     }
     @State private var visibleFrom: Int = 0
     @State private var visibleTo: Int = 0
+    /// On-screen width of the fitted preview image, used to scale the window corner radius.
+    @State private var previewDisplayWidth: CGFloat = 0
+    /// Approximate corner radius of a macOS 26+ window at full size (points).
+    private let windowCornerRadius: CGFloat = 24
 
     var body: some View {
+        GlassEffectContainer(spacing: 10) {
+            VStack(spacing: 10) {
+                searchBar
+                    .frame(width: panelWidth, height: searchBarHeight)
+                    .glassEffect(glass, in: Capsule())
+
+                resultsCard
+                    .frame(width: panelWidth, height: panelHeight)
+                    .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
+                    .glassEffect(glass, in: RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
+            }
+        }
+        .foregroundStyle(.primary)
+        .padding(12) // room for the glass edge highlights and shadow
+        .onAppear {
+            visibleTo = visibleLines - 1
+        }
+        .onChange(of: vm.panelHeight) {
+            visibleTo = visibleFrom + visibleLines - 1
+        }
+    }
+
+    var resultsCard: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                VStack(spacing: 0) {
-                    header
-                    windowList
-                }
-                .frame(width: listWidth)
+                windowList
+                    .frame(width: listWidth)
 
                 if vm.isPreviewEnabled {
                     Divider()
@@ -51,36 +80,19 @@ struct WindowSwitcherView: View {
                         .frame(width: previewWidth)
                 }
             }
-            .onAppear() {
-                visibleTo = visibleLines - 1
-            }
-            .onChange(of: vm.panelHeight) {
-                visibleTo = visibleFrom + visibleLines - 1
-            }
-            .background(VisualEffectBlur(darkeningOpacity: 0.25))
-            .clipShape(
-                UnevenRoundedRectangle(
-                    topLeadingRadius: 10,
-                    topTrailingRadius: 10
-                )
-            )
-            .foregroundStyle(.primary)
-            .frame(width: panelWidth, height: panelHeight)
+            .frame(maxHeight: .infinity)
 
             footer
-                .clipShape(
-                    UnevenRoundedRectangle(
-                        bottomLeadingRadius: 10,
-                        bottomTrailingRadius: 10
-                    )
-                )
-                .frame(maxWidth: panelWidth)
         }
     }
 
     // MARK: - parts
-    var header: some View {
-        VStack(spacing: 0) {
+    var searchBar: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(.secondary)
+
             KeyHandlingTextField(
                 text: $vm.filterText,
                 isFocused: $isFocused,
@@ -94,13 +106,8 @@ struct WindowSwitcherView: View {
                 }
             )
             .frame(height: 30)
-            .font(.title)
-            .textFieldStyle(.plain)
-            .padding(.bottom)
-
-            Divider().frame(height: 0.08)
         }
-        .padding()
+        .padding(.horizontal, 20)
     }
 
     var windowList: some View {
@@ -109,15 +116,21 @@ struct WindowSwitcherView: View {
                 LazyVStack(spacing: 0) {
                     ForEach(vm.displayedWindows.indices, id: \.self) { idx in
                         let window = vm.displayedWindows[idx]
-                        WindowRowView(window: window, isSelected: idx == vm.selectedIndex)
+                        WindowRowView(
+                            window: window,
+                            isSelected: idx == vm.selectedIndex,
+                            // concentric with the card: outer radius minus the gap to its edge
+                            cornerRadius: cardCornerRadius - listPadding
+                        )
                             .id(idx)
                             .onTapGesture {
                                 vm.selectedIndex = idx
                             }
                     }
                 }
-                .padding(.horizontal)
+                .padding(listPadding)
             }
+            .scrollIndicators(.never)
             .onChange(of: vm.selectedIndex) { _, newIndex in
                 let count = vm.displayedWindows.count
                 
@@ -146,17 +159,19 @@ struct WindowSwitcherView: View {
 
     var previewPanel: some View {
         ZStack {
-            VisualEffectBlur(darkeningOpacity: 0.35)
-
             VStack(alignment: .leading, spacing: 0) {
                 if let img = vm.previewImage {
                     Image(nsImage: img)
                         .resizable()
                         .scaledToFit()
+                        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { previewDisplayWidth = $0 }
+                        // The capture is a plain rectangle, so round it like a real window,
+                        // scaled down by the same factor as the image (it's captured in points).
                         .clipShape(RoundedRectangle(
-                            cornerRadius: 3
+                            cornerRadius: img.size.width > 0 ? windowCornerRadius * previewDisplayWidth / img.size.width : 0,
+                            style: .continuous
                         ))
-                        .shadow(color: Color.black.opacity(0.35), radius: 15, x: 0, y: 8)
+                        .shadow(color: Color.black.opacity(0.3), radius: 12, x: 0, y: 6)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     Text("No preview")
@@ -218,10 +233,9 @@ struct WindowSwitcherView: View {
                 Spacer()
                 Text("WindowSwitcher9000").font(.subheadline).foregroundColor(.secondary)
             }
-            .padding(.horizontal)
-            .frame(height: 30)
+            .padding(.horizontal, 18)
+            .frame(height: footerHeight)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .background(VisualEffectBlur(darkeningOpacity: 0.4))
     }
 }

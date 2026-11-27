@@ -20,11 +20,15 @@ struct KeyHandlingTextField: NSViewRepresentable {
     
     func makeNSView(context: Context) -> NSTextField {
         let field = FocusTextField()
-        field.placeholderString = "Find the Program in your mess ..."
         field.delegate = context.coordinator
         field.isBezeled = false
         field.backgroundColor = .clear
         field.font = NSFont.systemFont(ofSize: 20)
+        // Brighter than the default placeholder color so it stays readable on the dark-tinted glass
+        field.placeholderAttributedString = NSAttributedString(
+            string: "Find the Program in your mess ...",
+            attributes: [.font: NSFont.systemFont(ofSize: 20), .foregroundColor: NSColor.secondaryLabelColor]
+        )
         field.focusRingType = .none
         field.target = context.coordinator
         field.action = #selector(context.coordinator.enterPressed)
