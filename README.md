@@ -47,6 +47,11 @@ Build the project in XCode (Menu Bar: `Product -> Build`) and open the build fol
 Then just drag the created Application file (`WindowSwitcher.app`) out of the Release folder into your Application folder. Start the application and go to Usage.
 Goodluck!
 
+Releases are signed with the project's own certificate ("WindowSwitcher Self-Signed"), so macOS keeps the
+Accessibility and Screen Recording permissions across updates. Without that certificate, build with ad-hoc signing instead:
+`xcodebuild -scheme WindowSwitcher -configuration Release CODE_SIGN_IDENTITY=- build` (or set the signing identity to
+"Sign to Run Locally" in Xcode).
+
 # Usage
 On first startup the Program launches with a Menu Bar icon. This can be disabled later if wanted. 
 

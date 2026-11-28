@@ -38,6 +38,25 @@ jobs:
           # Since the trigger is restricted to tags, GITHUB_REF will always be a tag
           echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
 
+      # Signing with the same self-signed certificate for every release keeps the app's identity
+      # (bundle ID + certificate) stable, so macOS keeps its Accessibility and Screen Recording
+      # permissions across updates. The certificate lives in a temporary keychain for this job only.
+      - name: Install signing certificate
+        env:
+          SIGNING_CERT_P12: ${{ secrets.SIGNING_CERT_P12 }}
+          SIGNING_CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -base64 24)"
+          echo "$SIGNING_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$SIGNING_CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/cert.p12"
+
       - name: Build the application
         run: |
           xcodebuild \
@@ -47,6 +66,17 @@ jobs:
             MARKETING_VERSION=${{ env.VERSION }} \
             CURRENT_PROJECT_VERSION=${{ github.run_number }} \
             clean build
+
+      - name: Verify signature
+        run: |
+          APP="build/Build/Products/Release/WindowSwitcher.app"
+          codesign --verify --strict "$APP"
+          # must be identified by the certificate, not by a per-build hash (ad-hoc)
+          codesign -d -r- "$APP" 2>&1 | tee /dev/stderr | grep -q 'certificate leaf'
+
+      - name: Remove signing keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/signing.keychain-db" || true
 
       - name: Package build artifact
         run: |
