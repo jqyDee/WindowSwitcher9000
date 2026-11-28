@@ -73,6 +73,12 @@ final class OnboardingHandler {
         _ = AXIsProcessTrustedWithOptions(options)
     }
 
+    /// Restarting from the last step finishes the setup, so the restarted app doesn't show it again.
+    func finishAndRelaunch() {
+        UserDefaults.standard.set(true, forKey: Self.completedKey)
+        relaunch()
+    }
+
     /// macOS only applies a newly granted Screen Recording permission after the app restarts.
     func relaunch() {
         let configuration = NSWorkspace.OpenConfiguration()

@@ -293,9 +293,9 @@ private struct PreviewStep: View {
                     )
                     if requestedScreenRecording && !hasScreenRecording {
                         LabeledContent {
-                            Button("Restart WindowSwitcher") { OnboardingHandler.shared.relaunch() }
+                            Button("Finish & Restart") { OnboardingHandler.shared.finishAndRelaunch() }
                         } label: {
-                            Text("After switching WindowSwitcher on, restart the app so macOS applies the permission.")
+                            Text("After switching WindowSwitcher on, restart the app so macOS applies the permission. This finishes the setup.")
                                 .font(.callout)
                                 .foregroundStyle(.secondary)
                         }
