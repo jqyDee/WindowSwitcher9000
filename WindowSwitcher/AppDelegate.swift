@@ -11,7 +11,6 @@ import UserNotifications
 
 class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     var menuBarController: MenuBarHandler?
-    private var appearanceObserver: NSKeyValueObservation?
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         // The dock icon is hidden unless the user turned it on; without this, a fresh install read `false`.
@@ -26,12 +25,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     func applicationDidFinishLaunching(_ notification: Notification) {
         UNUserNotificationCenter.current().delegate = self
         
-        updateAppIcon()
-
-        // Observe changes to effectiveAppearance
-        appearanceObserver = NSApp.observe(\.effectiveAppearance, options: [.new]) { _, _ in
-            self.updateAppIcon()
-        }
 
         // The setup window asks for permissions (first launch, or whenever Accessibility is missing)
         if OnboardingHandler.shared.shouldShowOnLaunch {
@@ -51,18 +44,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         ClipboardViewModel.shared.startMonitoring()
     }
     
-    func applicationWillTerminate(_ notification: Notification) {
-        appearanceObserver?.invalidate()
-    }
 
 
-    func updateAppIcon() {
-        let isDark = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-        let iconName = isDark ? "AppIconDark" : "AppIconLight"
-        if let icon = NSImage(named: iconName) {
-            NSApp.applicationIconImage = icon
-        }
-    }
     
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,

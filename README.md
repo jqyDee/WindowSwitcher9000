@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/jqyDee/WindowSwitcher9000/blob/main/IconWindowSwitcher_Exports/IconWindowSwitcher-macOS-ClearDark-512x512%401x.png" width="200"/>
+  <img src="GithubAssets/icon.png" width="200"/>
 <!p>
 
 <h1 align="center">WindowSwitcher9000</h1>
