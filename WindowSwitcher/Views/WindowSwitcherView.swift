@@ -294,8 +294,14 @@ struct WindowSwitcherView: View {
         VStack(spacing: 0) {
             Divider().frame(height: 0.08)
             HStack {
+                // the app icon, small; clicking it stays the easter egg it always was
                 Button(action: { if let url = URL(string: "https://www.youtube.com/watch?v=dQw4w9WgXcQ") { NSWorkspace.shared.open(url) } }) {
-                    Image(systemName: "rectangle.3.offgrid").resizable().frame(width: 12, height: 12).foregroundColor(.secondary)
+                    if let appIcon = NSApp.applicationIconImage {
+                        Image(nsImage: appIcon)
+                            .resizable()
+                            .interpolation(.high)
+                            .frame(width: 18, height: 18)
+                    }
                 }
                 .buttonStyle(.plain)
 
@@ -304,7 +310,7 @@ struct WindowSwitcherView: View {
                 }
 
                 Spacer()
-                Text("WindowSwitcher9000").font(.subheadline).foregroundColor(.secondary)
+                Text("WindowSwitcher").font(.subheadline).foregroundColor(.secondary)
                 Divider().frame(height: 12)
                 Button { vm.handleChord(.commandK) } label: {
                     HStack(spacing: 6) {
